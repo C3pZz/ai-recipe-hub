@@ -3,7 +3,7 @@ title: "ChatGPT-5.2 レビュー (2026年3月版): GPT-4oは過去のものに"
 description: "2026年2月にChatGPTのデフォルトモデルとなったGPT-5.2を徹底レビュー。廃止されたGPT-4oやGPT-4.1シリーズとの違い、新機能、価格、ビジネスでのユースケースまで詳しく解説します。"
 date: 2026-03-01
 tags: ["文章生成AI", "OpenAI", "GPT-5.2"]
-categories: ["文章生成AI"]
+categories: ["writing-ai"]
 author: "AI Recipe Hub編集部"
 emoji: "🧠"
 toolName: "ChatGPT-5.2"

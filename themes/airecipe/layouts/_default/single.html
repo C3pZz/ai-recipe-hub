@@ -10,7 +10,12 @@
         <div class="article-meta">
           {{ with .Params.categories }}
           {{ range . }}
-          <a href="{{ "/categories/" | relURL }}{{ . | urlize }}/" class="tag tag-category">{{ . }}</a>
+          {{ $catSlug := . }}
+          {{ range $.Site.Params.categories }}
+            {{ if eq .slug $catSlug }}
+            <a href="{{ "/categories/" | relURL }}{{ .slug }}/" class="tag tag-category">{{ .name }}</a>
+            {{ end }}
+          {{ end }}
           {{ end }}
           {{ end }}
           {{ if .Params.isNew }}<span class="tag tag-new">NEW</span>{{ end }}

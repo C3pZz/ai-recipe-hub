@@ -3,7 +3,7 @@ title: "Gamma レビュー (2026年3月版): AIがデザインする「インタ
 description: "2026年、GammaはAIによるプレゼンテーション作成をさらに進化させ、単なるスライド生成を超えた「インタラクティブな体験」を提供します。データ連携、リアルタイム共同編集、AIによるフィードバックなど、最新機能を徹底解説します。"
 date: 2026-03-01
 tags: ["業務効率化AI", "プレゼンテーション", "Gamma", "デザインAI"]
-categories: ["業務効率化AI"]
+categories: ["productivity-ai"]
 author: "AI Recipe Hub編集部"
 emoji: "🎯"
 toolName: "Gamma"

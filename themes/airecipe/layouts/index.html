@@ -100,7 +100,12 @@
         <div class="article-card-body">
           <div class="article-card-meta">
             {{ with .Params.categories }}
-            <span class="tag tag-category">{{ index . 0 }}</span>
+            {{ $catSlug := index . 0 }}
+            {{ range $.Site.Params.categories }}
+              {{ if eq .slug $catSlug }}
+              <span class="tag tag-category">{{ .name }}</span>
+              {{ end }}
+            {{ end }}
             {{ end }}
             {{ if .Params.isNew }}
             <span class="tag tag-new">NEW</span>
@@ -143,7 +148,12 @@
         <div class="article-card-body">
           <div class="article-card-meta">
             {{ with .Params.categories }}
-            <span class="tag tag-category">{{ index . 0 }}</span>
+            {{ $catSlug := index . 0 }}
+            {{ range $.Site.Params.categories }}
+              {{ if eq .slug $catSlug }}
+              <span class="tag tag-category">{{ .name }}</span>
+              {{ end }}
+            {{ end }}
             {{ end }}
             <span class="article-card-date">{{ .Date.Format "01/02" }}</span>
           </div>
