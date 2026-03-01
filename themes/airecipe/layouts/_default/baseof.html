@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="{{ .Site.Language.Lang | default "ja" }}" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+  {{/* Title */}}
+  <title>{{ if .IsHome }}{{ .Site.Title }} - {{ .Site.Params.tagline }}{{ else }}{{ .Title }} | {{ .Site.Title }}{{ end }}</title>
+
+  {{/* Meta Description */}}
+  {{ if .Description }}
+  <meta name="description" content="{{ .Description }}" />
+  {{ else if .Summary }}
+  <meta name="description" content="{{ .Summary | plainify | truncate 160 }}" />
+  {{ else }}
+  <meta name="description" content="{{ .Site.Params.description }}" />
+  {{ end }}
+
+  {{/* Canonical URL */}}
+  <link rel="canonical" href="{{ .Permalink }}" />
+
+  {{/* OGP / Open Graph */}}
+  <meta property="og:type" content="{{ if .IsPage }}article{{ else }}website{{ end }}" />
+  <meta property="og:title" content="{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }}{{ end }}" />
+  <meta property="og:description" content="{{ if .Description }}{{ .Description }}{{ else if .Summary }}{{ .Summary | plainify | truncate 160 }}{{ else }}{{ .Site.Params.description }}{{ end }}" />
+  <meta property="og:url" content="{{ .Permalink }}" />
+  <meta property="og:site_name" content="{{ .Site.Title }}" />
+  {{ if .Params.image }}
+  <meta property="og:image" content="{{ .Params.image | absURL }}" />
+  {{ else }}
+  <meta property="og:image" content="{{ .Site.Params.ogImage | absURL }}" />
+  {{ end }}
+  {{ if .IsPage }}
+  <meta property="article:published_time" content="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}" />
+  <meta property="article:modified_time" content="{{ .Lastmod.Format "2006-01-02T15:04:05Z07:00" }}" />
+  {{ range .Params.categories }}
+  <meta property="article:section" content="{{ . }}" />
+  {{ end }}
+  {{ end }}
+
+  {{/* Twitter Card */}}
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }}{{ end }}" />
+  <meta name="twitter:description" content="{{ if .Description }}{{ .Description }}{{ else if .Summary }}{{ .Summary | plainify | truncate 160 }}{{ else }}{{ .Site.Params.description }}{{ end }}" />
+  {{ if .Params.image }}
+  <meta name="twitter:image" content="{{ .Params.image | absURL }}" />
+  {{ else }}
+  <meta name="twitter:image" content="{{ .Site.Params.ogImage | absURL }}" />
+  {{ end }}
+  {{ with .Site.Params.twitterHandle }}
+  <meta name="twitter:site" content="@{{ . }}" />
+  {{ end }}
+
+  {{/* Robots */}}
+  {{ if .Params.noindex }}
+  <meta name="robots" content="noindex, nofollow" />
+  {{ else }}
+  <meta name="robots" content="index, follow" />
+  {{ end }}
+
+  {{/* Structured Data - Website */}}
+  {{ if .IsHome }}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "{{ .Site.Title }}",
+    "url": "{{ .Site.BaseURL }}",
+    "description": "{{ .Site.Params.description }}",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "{{ .Site.BaseURL }}search/?q={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+  {{ end }}
+
+  {{/* Structured Data - Article */}}
+  {{ if .IsPage }}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "{{ .Title }}",
+    "description": "{{ if .Description }}{{ .Description }}{{ else }}{{ .Summary | plainify | truncate 160 }}{{ end }}",
+    "url": "{{ .Permalink }}",
+    "datePublished": "{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}",
+    "dateModified": "{{ .Lastmod.Format "2006-01-02T15:04:05Z07:00" }}",
+    "author": {
+      "@type": "Organization",
+      "name": "{{ .Site.Title }}"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "{{ .Site.Title }}",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "{{ .Site.Params.logo | absURL }}"
+      }
+    }{{ if .Params.image }},
+    "image": "{{ .Params.image | absURL }}"{{ end }}
+  }
+  </script>
+  {{ end }}
+
+  {{/* Fonts */}}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  {{/* Favicon */}}
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+
+  {{/* Stylesheets */}}
+  <link rel="stylesheet" href="{{ "/css/main.css" | relURL }}" />
+
+  {{/* Pagefind */}}
+  <link rel="stylesheet" href="/pagefind/pagefind-ui.css" />
+
+  {{/* RSS */}}
+  {{ range .AlternativeOutputFormats }}
+  <link rel="{{ .Rel }}" type="{{ .MediaType.Type }}" href="{{ .Permalink }}" title="{{ $.Site.Title }}" />
+  {{ end }}
+
+  {{/* Google Analytics */}}
+  {{ with .Site.Params.googleAnalytics }}
+  <script async src="https://www.googletagmanager.com/gtag/js?id={{ . }}"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', '{{ . }}');
+  </script>
+  {{ end }}
+
+  {{/* Extra head */}}
+  {{ block "extra_head" . }}{{ end }}
+</head>
+<body>
+  <div class="site-wrapper">
+
+    {{/* Header */}}
+    {{ partial "header.html" . }}
+
+    {{/* Search Overlay */}}
+    {{ partial "search.html" . }}
+
+    {{/* Main Content */}}
+    <main id="main-content">
+      {{ block "main" . }}{{ end }}
+    </main>
+
+    {{/* Footer */}}
+    {{ partial "footer.html" . }}
+
+  </div>
+
+  {{/* Scripts */}}
+  <script src="{{ "/js/main.js" | relURL }}" defer></script>
+  <script src="/pagefind/pagefind-ui.js" defer></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', function() {
+      if (typeof PagefindUI !== 'undefined') {
+        new PagefindUI({
+          element: '#search-results',
+          showSubResults: true,
+          translations: {
+            placeholder: 'AIツールを検索...',
+            zero_results: '「[SEARCH_TERM]」の検索結果は見つかりませんでした。'
+          }
+        });
+      }
+    });
+  </script>
+
+  {{ block "extra_scripts" . }}{{ end }}
+</body>
+</html>

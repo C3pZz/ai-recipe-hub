@@ -1,0 +1,177 @@
+{{ define "main" }}
+<div class="container">
+  <div class="article-layout" data-pagefind-body>
+
+    {{/* Main Article */}}
+    <article>
+
+      {{/* Article Header */}}
+      <header class="article-header">
+        <div class="article-meta">
+          {{ with .Params.categories }}
+          {{ range . }}
+          <a href="{{ "/categories/" | relURL }}{{ . | urlize }}/" class="tag tag-category">{{ . }}</a>
+          {{ end }}
+          {{ end }}
+          {{ if .Params.isNew }}<span class="tag tag-new">NEW</span>{{ end }}
+          {{ if .Params.isPopular }}<span class="tag tag-popular">人気</span>{{ end }}
+          <span style="color:var(--color-text-muted);font-size:0.85rem;">{{ .Date.Format "2006年01月02日" }}</span>
+          <span style="color:var(--color-text-muted);font-size:0.85rem;">⏱ {{ .ReadingTime }}分で読める</span>
+        </div>
+        <h1>{{ .Title }}</h1>
+        {{ with .Description }}
+        <p class="article-description">{{ . }}</p>
+        {{ end }}
+      </header>
+
+      {{/* Tool Info Box (if tool review) */}}
+      {{ if .Params.toolName }}
+      <div class="tool-info-box">
+        <div class="tool-info-header">
+          <div class="tool-icon">{{ .Params.emoji | default "🤖" }}</div>
+          <div>
+            <div class="tool-name">{{ .Params.toolName }}</div>
+            <div class="tool-tagline">{{ .Params.toolTagline }}</div>
+          </div>
+        </div>
+
+        {{ with .Params.rating }}
+        <div class="tool-rating-large">
+          <span class="stars">
+            {{ if ge . 4.5 }}★★★★★{{ else if ge . 4.0 }}★★★★☆{{ else if ge . 3.5 }}★★★½☆{{ else }}★★★☆☆{{ end }}
+          </span>
+          <span class="rating-score">{{ . }}</span>
+          <span class="rating-count">/ 5.0</span>
+        </div>
+        {{ end }}
+
+        <div class="tool-info-grid">
+          {{ with .Params.toolPrice }}
+          <div class="tool-info-item">
+            <div class="tool-info-label">💰 価格</div>
+            <div class="tool-info-value">{{ . }}</div>
+          </div>
+          {{ end }}
+          {{ with .Params.toolFreeplan }}
+          <div class="tool-info-item">
+            <div class="tool-info-label">🆓 無料プラン</div>
+            <div class="tool-info-value">{{ . }}</div>
+          </div>
+          {{ end }}
+          {{ with .Params.toolCategory }}
+          <div class="tool-info-item">
+            <div class="tool-info-label">📂 カテゴリ</div>
+            <div class="tool-info-value">{{ . }}</div>
+          </div>
+          {{ end }}
+          {{ with .Params.toolLanguage }}
+          <div class="tool-info-item">
+            <div class="tool-info-label">🌐 日本語対応</div>
+            <div class="tool-info-value">{{ . }}</div>
+          </div>
+          {{ end }}
+        </div>
+
+        {{ with .Params.affiliateUrl }}
+        <a href="{{ . }}" class="affiliate-btn" target="_blank" rel="noopener noreferrer sponsored" data-affiliate="true" data-tool="{{ $.Params.toolName }}" data-position="top">
+          🚀 {{ $.Params.toolName }} を無料で試す
+        </a>
+        {{ end }}
+        {{ with .Params.officialUrl }}
+        <a href="{{ . }}" class="affiliate-btn-secondary" target="_blank" rel="noopener noreferrer">
+          🌐 公式サイトを見る
+        </a>
+        {{ end }}
+        <p class="affiliate-disclaimer">※ アフィリエイトリンクを含む場合があります</p>
+      </div>
+      {{ end }}
+
+      {{/* Article Content */}}
+      <div class="article-content">
+        {{ .Content }}
+      </div>
+
+      {{/* Bottom CTA */}}
+      {{ with .Params.affiliateUrl }}
+      <div style="margin-top:3rem;padding:2rem;background:var(--color-bg-card);border:1px solid var(--color-border);border-radius:var(--radius-lg);text-align:center;">
+        <h3 style="margin-bottom:0.75rem;">{{ $.Params.toolName }} を試してみる</h3>
+        <p style="color:var(--color-text-secondary);margin-bottom:1.25rem;font-size:0.95rem;">
+          {{ $.Params.toolName }} の詳細・最新プランは公式サイトでご確認ください。
+        </p>
+        <a href="{{ . }}" class="btn-primary" style="font-size:1rem;padding:0.75rem 2rem;" target="_blank" rel="noopener noreferrer sponsored" data-affiliate="true" data-tool="{{ $.Params.toolName }}" data-position="bottom">
+          🚀 {{ $.Params.toolName }} を無料で試す →
+        </a>
+      </div>
+      {{ end }}
+
+      {{/* Tags */}}
+      {{ with .Params.tags }}
+      <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--color-border);">
+        <span style="font-size:0.85rem;color:var(--color-text-muted);margin-right:0.5rem;">タグ:</span>
+        {{ range . }}
+        <a href="{{ "/tags/" | relURL }}{{ . | urlize }}/" class="tag tag-category" style="margin-right:0.4rem;text-decoration:none;">{{ . }}</a>
+        {{ end }}
+      </div>
+      {{ end }}
+
+    </article>
+
+    {{/* Sidebar */}}
+    <aside class="sidebar">
+
+      {{/* Table of Contents */}}
+      {{ if .TableOfContents }}
+      <div class="sidebar-widget">
+        <div class="sidebar-widget-title">📋 目次</div>
+        {{ .TableOfContents }}
+      </div>
+      {{ end }}
+
+      {{/* Affiliate CTA in Sidebar */}}
+      {{ with .Params.affiliateUrl }}
+      <div class="sidebar-widget" style="text-align:center;">
+        <div style="font-size:2rem;margin-bottom:0.75rem;">{{ $.Params.emoji | default "🤖" }}</div>
+        <h4 style="margin-bottom:0.5rem;font-size:1rem;">{{ $.Params.toolName }}</h4>
+        <p style="font-size:0.85rem;color:var(--color-text-secondary);margin-bottom:1rem;">{{ $.Params.toolTagline }}</p>
+        {{ with $.Params.rating }}
+        <div class="rating" style="justify-content:center;margin-bottom:1rem;">⭐ {{ . }} / 5.0</div>
+        {{ end }}
+        <a href="{{ . }}" class="affiliate-btn" target="_blank" rel="noopener noreferrer sponsored" data-affiliate="true" data-tool="{{ $.Params.toolName }}" data-position="sidebar">
+          無料で試す →
+        </a>
+        <p class="affiliate-disclaimer">※ アフィリエイトリンクを含む</p>
+      </div>
+      {{ end }}
+
+      {{/* Related Articles */}}
+      {{ $related := .Site.RegularPages.Related . | first 5 }}
+      {{ if $related }}
+      <div class="sidebar-widget">
+        <div class="sidebar-widget-title">📚 関連記事</div>
+        {{ range $related }}
+        <a href="{{ .Permalink }}" class="related-article">
+          <div class="related-article-icon">{{ .Params.emoji | default "🤖" }}</div>
+          <div>
+            <div class="related-article-title">{{ .Title }}</div>
+            <div class="related-article-date">{{ .Date.Format "2006年01月02日" }}</div>
+          </div>
+        </a>
+        {{ end }}
+      </div>
+      {{ end }}
+
+      {{/* Newsletter */}}
+      <div class="sidebar-widget" style="background:linear-gradient(135deg,rgba(99,102,241,0.1),rgba(6,182,212,0.05));border-color:rgba(99,102,241,0.2);">
+        <div class="sidebar-widget-title">📧 ニュースレター</div>
+        <p style="font-size:0.875rem;color:var(--color-text-secondary);margin-bottom:1rem;">最新AIツール情報を毎週お届け</p>
+        <form action="#" method="post">
+          <input type="email" class="cta-input" placeholder="メールアドレス" style="width:100%;margin-bottom:0.5rem;" required />
+          <button type="submit" class="btn-primary" style="width:100%;">無料で登録</button>
+        </form>
+      </div>
+
+    </aside>
+
+  </div>
+</div>
+{{ end }}

@@ -1,0 +1,39 @@
+<header class="site-header">
+  <div class="container">
+    <div class="header-inner">
+
+      {{/* Logo */}}
+      <a href="{{ "/" | relURL }}" class="site-logo" aria-label="{{ .Site.Title }} ホーム">
+        <div class="logo-icon">🤖</div>
+        <span class="logo-text">AI <span>Recipe</span> Hub</span>
+      </a>
+
+      {{/* Navigation */}}
+      <nav class="site-nav" role="navigation" aria-label="メインナビゲーション">
+        <a href="{{ "/" | relURL }}">ホーム</a>
+        {{ range .Site.Params.categories }}
+        <a href="{{ "/categories/" | relURL }}{{ .slug }}/">{{ .name }}</a>
+        {{ end }}
+        <a href="{{ "/comparison/" | relURL }}">比較ツール</a>
+        <a href="{{ "/about/" | relURL }}">About</a>
+      </nav>
+
+      {{/* Header Actions */}}
+      <div class="header-actions">
+        <button class="search-toggle" aria-label="検索を開く" aria-expanded="false">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+          <span>検索</span>
+          <kbd style="font-size:0.7rem;opacity:0.6;border:1px solid currentColor;padding:0 3px;border-radius:3px;">⌘K</kbd>
+        </button>
+        <a href="{{ "/newsletter/" | relURL }}" class="btn-primary">
+          📧 無料登録
+        </a>
+        <button class="hamburger" aria-label="メニューを開く" aria-expanded="false">☰</button>
+      </div>
+
+    </div>
+  </div>
+</header>

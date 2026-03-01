@@ -1,0 +1,71 @@
+name: Deploy AI Recipe Hub
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # 手動実行も可能
+
+# GitHub Pagesへのデプロイに必要な権限
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同時デプロイを防ぐ
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Hugo Site
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: '0.141.0'
+          extended: true
+
+      - name: Setup Node.js (for Pagefind)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Pagefind
+        run: npm install -g pagefind
+
+      - name: Build Hugo site
+        run: |
+          hugo --minify --baseURL "${{ vars.HUGO_BASE_URL || 'https://airecipehub.com/' }}"
+        env:
+          HUGO_ENVIRONMENT: production
+
+      - name: Run Pagefind indexing
+        run: |
+          pagefind --site public --output-path public/pagefind
+        working-directory: ${{ github.workspace }}
+
+      - name: Upload artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./public
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

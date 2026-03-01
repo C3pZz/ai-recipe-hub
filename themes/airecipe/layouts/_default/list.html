@@ -1,0 +1,58 @@
+{{ define "main" }}
+<div class="container">
+
+  {{/* Category Header */}}
+  {{ if .IsSection }}
+  <div class="category-header">
+    {{ with .Params.icon }}
+    <div class="category-icon-large">{{ . }}</div>
+    {{ end }}
+    <h1>{{ .Title }}</h1>
+    {{ with .Description }}
+    <p>{{ . }}</p>
+    {{ end }}
+  </div>
+  {{ else if .IsHome }}
+  {{/* handled by index.html */}}
+  {{ else }}
+  {{/* Taxonomy (category, tag) */}}
+  <div class="category-header">
+    <h1>{{ .Title }}</h1>
+    <p>「{{ .Title }}」に関する記事一覧 ({{ len .Pages }}件)</p>
+  </div>
+  {{ end }}
+
+  {{/* Articles Grid */}}
+  <div class="articles-grid">
+    {{ range .Paginator.Pages }}
+    <a href="{{ .Permalink }}" class="article-card">
+      <div class="article-card-image">
+        {{ if .Params.emoji }}{{ .Params.emoji }}{{ else }}🤖{{ end }}
+      </div>
+      <div class="article-card-body">
+        <div class="article-card-meta">
+          {{ with .Params.categories }}
+          <span class="tag tag-category">{{ index . 0 }}</span>
+          {{ end }}
+          {{ if .Params.isNew }}<span class="tag tag-new">NEW</span>{{ end }}
+          {{ if .Params.isPopular }}<span class="tag tag-popular">人気</span>{{ end }}
+          <span class="article-card-date">{{ .Date.Format "01/02" }}</span>
+        </div>
+        <h2 class="article-card-title">{{ .Title }}</h2>
+        <p class="article-card-excerpt">{{ .Description | default (.Summary | plainify | truncate 120) }}</p>
+        <div class="article-card-footer">
+          <span class="read-time">⏱ {{ .ReadingTime }}分</span>
+          {{ with .Params.rating }}
+          <span class="rating">⭐ {{ . }}</span>
+          {{ end }}
+        </div>
+      </div>
+    </a>
+    {{ end }}
+  </div>
+
+  {{/* Pagination */}}
+  {{ template "_internal/pagination.html" . }}
+
+</div>
+{{ end }}

@@ -1,0 +1,14 @@
+[
+  {{- range $i, $e := .Site.RegularPages -}}
+  {{- if $i -}},{{- end -}}
+  {
+    "title": {{ $e.Title | jsonify }},
+    "url": {{ $e.Permalink | jsonify }},
+    "description": {{ $e.Description | jsonify }},
+    "categories": {{ $e.Params.categories | jsonify }},
+    "tags": {{ $e.Params.tags | jsonify }},
+    "date": {{ $e.Date.Format "2006-01-02" | jsonify }},
+    "summary": {{ $e.Summary | plainify | jsonify }}
+  }
+  {{- end -}}
+]

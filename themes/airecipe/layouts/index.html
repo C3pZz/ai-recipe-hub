@@ -1,0 +1,178 @@
+{{ define "main" }}
+
+{{/* Hero Section */}}
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge">
+      🚀 最新AIツール情報を毎日更新
+    </div>
+    <h1>
+      <span class="highlight">AIツール</span>の比較・レビューで<br>
+      最適な選択を
+    </h1>
+    <p class="hero-description">
+      文章生成・画像生成・コーディング・業務効率化など、あらゆるカテゴリのAIツールを徹底比較。
+      実際の活用レシピとプロンプト例で、すぐに使える情報をお届けします。
+    </p>
+    <div class="hero-actions">
+      <a href="#latest-articles" class="btn-primary">
+        📖 最新記事を読む
+      </a>
+      <a href="{{ "/comparison/" | relURL }}" class="btn-outline">
+        ⚖️ AIツールを比較する
+      </a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-item">
+        <span class="stat-number">{{ len (where .Site.RegularPages "Type" "posts") }}+</span>
+        <span class="stat-label">レビュー記事</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-number">5+</span>
+        <span class="stat-label">カテゴリ</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-number">毎日</span>
+        <span class="stat-label">更新</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+{{/* Category Navigation */}}
+<section class="category-nav">
+  <div class="container">
+    <div class="category-nav-inner">
+      <a href="{{ "/posts/" | relURL }}" class="category-chip active">
+        🌐 すべて
+      </a>
+      {{ range .Site.Params.categories }}
+      <a href="{{ "/categories/" | relURL }}{{ .slug }}/" class="category-chip">
+        {{ .icon }} {{ .name }}
+      </a>
+      {{ end }}
+    </div>
+  </div>
+</section>
+
+{{/* Main Content */}}
+<div class="container" style="padding-top:3rem;padding-bottom:3rem;">
+
+  {{/* Featured Article */}}
+  {{ $featured := first 1 (where .Site.RegularPages "Params.featured" true) }}
+  {{ range $featured }}
+  <a href="{{ .Permalink }}" class="featured-article">
+    <div class="featured-article-image">
+      {{ if .Params.emoji }}{{ .Params.emoji }}{{ else }}🤖{{ end }}
+    </div>
+    <div class="featured-article-body">
+      <div class="featured-badge">⭐ 注目記事</div>
+      <h2 class="featured-article-title">{{ .Title }}</h2>
+      <p class="featured-article-excerpt">{{ .Description | default (.Summary | plainify | truncate 200) }}</p>
+      <div class="featured-article-meta">
+        {{ with .Params.categories }}
+        <span class="tag tag-category">{{ index . 0 }}</span>
+        {{ end }}
+        <span>{{ .Date.Format "2006年01月02日" }}</span>
+        <span>{{ .ReadingTime }}分で読める</span>
+        {{ with .Params.rating }}
+        <span class="rating">⭐ {{ . }}</span>
+        {{ end }}
+      </div>
+    </div>
+  </a>
+  {{ end }}
+
+  {{/* Latest Articles */}}
+  <div id="latest-articles">
+    <div class="section-header">
+      <h2 class="section-title">最新レビュー</h2>
+      <a href="{{ "/posts/" | relURL }}" class="section-link">すべて見る →</a>
+    </div>
+
+    <div class="articles-grid">
+      {{ $articles := where .Site.RegularPages "Type" "posts" }}
+      {{ range first 9 $articles }}
+      <a href="{{ .Permalink }}" class="article-card">
+        <div class="article-card-image">
+          {{ if .Params.emoji }}{{ .Params.emoji }}{{ else }}🤖{{ end }}
+        </div>
+        <div class="article-card-body">
+          <div class="article-card-meta">
+            {{ with .Params.categories }}
+            <span class="tag tag-category">{{ index . 0 }}</span>
+            {{ end }}
+            {{ if .Params.isNew }}
+            <span class="tag tag-new">NEW</span>
+            {{ end }}
+            {{ if .Params.isPopular }}
+            <span class="tag tag-popular">人気</span>
+            {{ end }}
+            <span class="article-card-date">{{ .Date.Format "01/02" }}</span>
+          </div>
+          <h3 class="article-card-title">{{ .Title }}</h3>
+          <p class="article-card-excerpt">{{ .Description | default (.Summary | plainify | truncate 120) }}</p>
+          <div class="article-card-footer">
+            <span class="read-time">⏱ {{ .ReadingTime }}分</span>
+            {{ with .Params.rating }}
+            <span class="rating">⭐ {{ . }}</span>
+            {{ end }}
+          </div>
+        </div>
+      </a>
+      {{ end }}
+    </div>
+  </div>
+
+  {{/* Category Sections */}}
+  {{ range .Site.Params.categories }}
+  {{ $slug := .slug }}
+  {{ $catArticles := where $.Site.RegularPages "Params.categories" "intersect" (slice .name) }}
+  {{ if $catArticles }}
+  <div style="margin-bottom:3rem;">
+    <div class="section-header">
+      <h2 class="section-title">{{ .icon }} {{ .name }}</h2>
+      <a href="{{ "/categories/" | relURL }}{{ $slug }}/" class="section-link">もっと見る →</a>
+    </div>
+    <div class="articles-grid">
+      {{ range first 3 $catArticles }}
+      <a href="{{ .Permalink }}" class="article-card">
+        <div class="article-card-image">
+          {{ if .Params.emoji }}{{ .Params.emoji }}{{ else }}🤖{{ end }}
+        </div>
+        <div class="article-card-body">
+          <div class="article-card-meta">
+            {{ with .Params.categories }}
+            <span class="tag tag-category">{{ index . 0 }}</span>
+            {{ end }}
+            <span class="article-card-date">{{ .Date.Format "01/02" }}</span>
+          </div>
+          <h3 class="article-card-title">{{ .Title }}</h3>
+          <p class="article-card-excerpt">{{ .Description | default (.Summary | plainify | truncate 100) }}</p>
+          <div class="article-card-footer">
+            <span class="read-time">⏱ {{ .ReadingTime }}分</span>
+            {{ with .Params.rating }}
+            <span class="rating">⭐ {{ . }}</span>
+            {{ end }}
+          </div>
+        </div>
+      </a>
+      {{ end }}
+    </div>
+  </div>
+  {{ end }}
+  {{ end }}
+
+  {{/* Newsletter CTA */}}
+  <div class="cta-section">
+    <h2>最新AIツール情報を無料で受け取る</h2>
+    <p>毎週、厳選されたAIツールのレビューと活用レシピをお届けします。<br>登録は無料、いつでも解除できます。</p>
+    <form class="cta-form" action="#" method="post">
+      <input type="email" class="cta-input" placeholder="メールアドレスを入力" required aria-label="メールアドレス" />
+      <button type="submit" class="btn-primary">無料で登録</button>
+    </form>
+  </div>
+
+</div>
+
+{{ end }}

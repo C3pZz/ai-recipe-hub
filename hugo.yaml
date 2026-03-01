@@ -1,0 +1,128 @@
+baseURL: "https://airecipehub.com/"
+languageCode: "ja"
+title: "AI Recipe Hub"
+theme: "airecipe"
+defaultContentLanguage: "ja"
+enableRobotsTXT: true
+enableGitInfo: false
+summaryLength: 120
+pagination:
+  pagerSize: 12
+  path: "page"
+
+# Taxonomies
+taxonomies:
+  category: categories
+  tag: tags
+
+# Output formats
+outputs:
+  home:
+    - HTML
+    - RSS
+    - JSON
+  page:
+    - HTML
+  section:
+    - HTML
+    - RSS
+  taxonomy:
+    - HTML
+    - RSS
+
+# Markup
+markup:
+  goldmark:
+    renderer:
+      unsafe: true
+    extensions:
+      table: true
+      strikethrough: true
+      taskList: true
+  tableOfContents:
+    startLevel: 2
+    endLevel: 3
+    ordered: false
+  highlight:
+    style: "github-dark"
+    lineNos: false
+    tabWidth: 2
+
+# Related content
+related:
+  includeNewer: true
+  threshold: 80
+  toLower: false
+  indices:
+    - name: categories
+      weight: 100
+    - name: tags
+      weight: 80
+    - name: keywords
+      weight: 50
+
+# Sitemap
+sitemap:
+  changefreq: "weekly"
+  priority: 0.5
+  filename: "sitemap.xml"
+
+# Privacy
+privacy:
+  googleAnalytics:
+    anonymizeIP: true
+    respectDoNotTrack: true
+
+# Site Parameters
+params:
+  tagline: "AIツール比較・レビュー専門メディア"
+  description: "文章生成・画像生成・コーディング・業務効率化など、あらゆるカテゴリのAIツールを徹底比較。実際の活用レシピとプロンプト例で、最適なAIツール選びをサポートします。"
+  logo: "/images/logo.png"
+  ogImage: "/images/og-image.png"
+  googleAnalytics: ""
+  twitterHandle: "airecipehub"
+
+  categories:
+    - name: "文章生成AI"
+      slug: "writing-ai"
+      icon: "✍️"
+      description: "ブログ記事・コピー・メールなど、文章作成を効率化するAIツールの比較・レビュー"
+    - name: "画像生成AI"
+      slug: "image-ai"
+      icon: "🎨"
+      description: "テキストから画像を生成するAIツールの比較・レビュー。Midjourney、DALL-E、Stable Diffusionなど"
+    - name: "コーディングAI"
+      slug: "coding-ai"
+      icon: "💻"
+      description: "プログラミングを支援するAIツールの比較・レビュー。GitHub Copilot、Cursorなど"
+    - name: "業務効率化AI"
+      slug: "productivity-ai"
+      icon: "⚡"
+      description: "会議録・要約・タスク管理など、業務効率を高めるAIツールの比較・レビュー"
+    - name: "マーケティングAI"
+      slug: "marketing-ai"
+      icon: "📈"
+      description: "SEO・広告・SNS運用を自動化するAIツールの比較・レビュー"
+
+  social:
+    twitter: "airecipehub"
+
+# Menu
+menu:
+  main:
+    - identifier: home
+      name: ホーム
+      url: /
+      weight: 10
+    - identifier: posts
+      name: 記事一覧
+      url: /posts/
+      weight: 20
+    - identifier: comparison
+      name: 比較ツール
+      url: /comparison/
+      weight: 30
+    - identifier: about
+      name: About
+      url: /about/
+      weight: 40

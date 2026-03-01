@@ -1,0 +1,28 @@
+{{ define "main" }}
+<div class="container" style="padding:3rem 1.5rem;">
+  <h1 style="margin-bottom:0.5rem;">🔍 サイト内検索</h1>
+  <p style="color:var(--color-text-secondary);margin-bottom:2rem;">AIツール名やキーワードで検索できます</p>
+  <div id="pagefind-search"></div>
+</div>
+{{ end }}
+
+{{ define "extra_head" }}
+<link rel="stylesheet" href="/pagefind/pagefind-ui.css" />
+{{ end }}
+
+{{ define "extra_scripts" }}
+<script src="/pagefind/pagefind-ui.js"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', function() {
+    new PagefindUI({
+      element: '#pagefind-search',
+      showSubResults: true,
+      showImages: false,
+      translations: {
+        placeholder: 'AIツールを検索... (例: ChatGPT, Midjourney)',
+        zero_results: '「[SEARCH_TERM]」の検索結果は見つかりませんでした。'
+      }
+    });
+  });
+</script>
+{{ end }}

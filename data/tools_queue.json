@@ -1,0 +1,25 @@
+{
+  "queue": [
+    {"name": "Gemini 2.0 Flash", "category": "文章生成AI", "priority": 1},
+    {"name": "Stable Diffusion 3", "category": "画像生成AI", "priority": 2},
+    {"name": "GitHub Copilot", "category": "コーディングAI", "priority": 3},
+    {"name": "Otter.ai", "category": "業務効率化AI", "priority": 4},
+    {"name": "Surfer SEO", "category": "マーケティングAI", "priority": 5},
+    {"name": "Adobe Firefly", "category": "画像生成AI", "priority": 6},
+    {"name": "Runway ML", "category": "画像生成AI", "priority": 7},
+    {"name": "Codeium", "category": "コーディングAI", "priority": 8},
+    {"name": "Copy.ai", "category": "文章生成AI", "priority": 9},
+    {"name": "Writesonic", "category": "文章生成AI", "priority": 10},
+    {"name": "Descript", "category": "業務効率化AI", "priority": 11},
+    {"name": "Synthesia", "category": "業務効率化AI", "priority": 12},
+    {"name": "Semrush AI", "category": "マーケティングAI", "priority": 13},
+    {"name": "Frase", "category": "マーケティングAI", "priority": 14},
+    {"name": "Tabnine", "category": "コーディングAI", "priority": 15},
+    {"name": "Pika Labs", "category": "画像生成AI", "priority": 16},
+    {"name": "ElevenLabs", "category": "業務効率化AI", "priority": 17},
+    {"name": "Murf AI", "category": "業務効率化AI", "priority": 18},
+    {"name": "Beautiful.ai", "category": "業務効率化AI", "priority": 19},
+    {"name": "Tome", "category": "業務効率化AI", "priority": 20}
+  ],
+  "last_updated": "2026-03-01"
+}

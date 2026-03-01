@@ -1,0 +1,64 @@
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+
+      {{/* Brand */}}
+      <div class="footer-brand">
+        <a href="{{ "/" | relURL }}" class="site-logo" style="margin-bottom:1rem;display:inline-flex;">
+          <div class="logo-icon">🤖</div>
+          <span class="logo-text">AI <span>Recipe</span> Hub</span>
+        </a>
+        <p>AIツールの比較・レビュー・活用レシピを提供する専門メディア。最新のAI情報をいち早くお届けします。</p>
+        <div style="margin-top:1rem;display:flex;gap:0.75rem;">
+          {{ with .Site.Params.social.twitter }}
+          <a href="https://twitter.com/{{ . }}" target="_blank" rel="noopener noreferrer" style="color:var(--color-text-muted);font-size:0.875rem;" aria-label="Twitter">𝕏 Twitter</a>
+          {{ end }}
+        </div>
+      </div>
+
+      {{/* カテゴリ */}}
+      <div>
+        <h3 class="footer-heading">カテゴリ</h3>
+        <ul class="footer-links">
+          {{ range .Site.Params.categories }}
+          <li><a href="{{ "/categories/" | relURL }}{{ .slug }}/">{{ .name }}</a></li>
+          {{ end }}
+        </ul>
+      </div>
+
+      {{/* コンテンツ */}}
+      <div>
+        <h3 class="footer-heading">コンテンツ</h3>
+        <ul class="footer-links">
+          <li><a href="{{ "/posts/" | relURL }}">最新記事</a></li>
+          <li><a href="{{ "/comparison/" | relURL }}">比較ツール</a></li>
+          <li><a href="{{ "/ranking/" | relURL }}">ランキング</a></li>
+          <li><a href="{{ "/newsletter/" | relURL }}">ニュースレター</a></li>
+        </ul>
+      </div>
+
+      {{/* サイト情報 */}}
+      <div>
+        <h3 class="footer-heading">サイト情報</h3>
+        <ul class="footer-links">
+          <li><a href="{{ "/about/" | relURL }}">About</a></li>
+          <li><a href="{{ "/contact/" | relURL }}">お問い合わせ</a></li>
+          <li><a href="{{ "/privacy/" | relURL }}">プライバシーポリシー</a></li>
+          <li><a href="{{ "/affiliate-disclosure/" | relURL }}">アフィリエイト開示</a></li>
+        </ul>
+      </div>
+
+    </div>
+
+    {{/* Footer Bottom */}}
+    <div class="footer-bottom">
+      <span>© {{ now.Year }} AI Recipe Hub. All rights reserved.</span>
+      <div class="footer-bottom-links">
+        <a href="{{ "/privacy/" | relURL }}">プライバシーポリシー</a>
+        <a href="{{ "/affiliate-disclosure/" | relURL }}">アフィリエイト開示</a>
+        <a href="{{ "/sitemap.xml" | relURL }}">サイトマップ</a>
+      </div>
+    </div>
+
+  </div>
+</footer>
