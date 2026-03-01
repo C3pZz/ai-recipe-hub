@@ -5,6 +5,8 @@ theme: "airecipe"
 defaultContentLanguage: "ja"
 enableRobotsTXT: true
 enableGitInfo: false
+canonifyURLs: true
+relativeURLs: true
 summaryLength: 120
 pagination:
   pagerSize: 12
