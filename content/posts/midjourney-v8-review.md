@@ -5,6 +5,17 @@ date: 2026-03-01
 tags: ["画像生成AI", "Midjourney", "Midjourney V8", "Niji 7"]
 categories: ["画像生成AI"]
 author: "AI Recipe Hub編集部"
+emoji: "🎨"
+toolName: "Midjourney V8"
+toolTagline: "画像生成AIの王者、次世代バージョン"
+rating: 4.8
+toolPrice: "$10〜$60/月"
+toolFreeplan: "なし"
+toolCategory: "画像生成AI"
+toolLanguage: "対応（プロンプトは英語推奨）"
+isPopular: true
+affiliateUrl: "https://midjourney.com"
+officialUrl: "https://midjourney.com"
 ---
 
 ## 結論: Midjourney V8は「弱点克服」と「品質向上」で敵なしの状態へ

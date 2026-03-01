@@ -5,6 +5,16 @@ date: 2026-03-01
 tags: ["業務効率化AI", "プレゼンテーション", "Gamma", "デザインAI"]
 categories: ["業務効率化AI"]
 author: "AI Recipe Hub編集部"
+emoji: "🎯"
+toolName: "Gamma"
+toolTagline: "AI駆動型インタラクティブプレゼンテーション"
+rating: 4.4
+toolPrice: "無料〜$20/月"
+toolFreeplan: "あり（月400 AIクレジット）"
+toolCategory: "業務効率化AI"
+toolLanguage: "対応"
+affiliateUrl: "https://gamma.app"
+officialUrl: "https://gamma.app"
 ---
 
 ## 結論: Gammaは「スライド作成ツール」から「AI駆動型インタラクティブコンテンツプラットフォーム」へ

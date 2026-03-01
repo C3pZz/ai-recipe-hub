@@ -5,6 +5,17 @@ date: 2026-03-01
 tags: ["業務効率化AI", "Notion", "AIエージェント", "ナレッジマネジメント"]
 categories: ["業務効率化AI"]
 author: "AI Recipe Hub編集部"
+emoji: "📋"
+toolName: "Notion AI 3.3"
+toolTagline: "自律型カスタムエージェント搭載ワークスペース"
+rating: 4.6
+toolPrice: "$10〜$18/月"
+toolFreeplan: "あり（制限付き）"
+toolCategory: "業務効率化AI"
+toolLanguage: "完全対応"
+isNew: true
+affiliateUrl: "https://www.notion.so"
+officialUrl: "https://www.notion.so"
 ---
 
 ## 結論: Notionは「ドキュメントツール」から「自律型ワークスペースOS」へ

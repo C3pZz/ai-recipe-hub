@@ -5,6 +5,17 @@ date: 2026-03-01
 tags: ["コーディングAI", "GitHub Copilot", "開発効率化", "AIエージェント"]
 categories: ["コーディングAI"]
 author: "AI Recipe Hub編集部"
+emoji: "🐙"
+toolName: "GitHub Copilot"
+toolTagline: "GitHubの自律型AI開発エージェント"
+rating: 4.6
+toolPrice: "$10〜$39/月"
+toolFreeplan: "あり（個人向け制限付き）"
+toolCategory: "コーディングAI"
+toolLanguage: "完全対応"
+isPopular: true
+affiliateUrl: "https://github.com/features/copilot"
+officialUrl: "https://github.com/features/copilot"
 ---
 
 ## 結論: GitHub Copilotは「コードアシスタント」から「自律型開発エージェント」へ

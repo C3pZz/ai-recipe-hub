@@ -37,7 +37,7 @@ jobs:
         uses: actions/configure-pages@v4
       - name: Build with Hugo
         run: |
-          hugo --minify --baseURL "${{ steps.pages.outputs.base_url }}/"
+          hugo --minify --baseURL "https://c3pzz.github.io/ai-recipe-hub/"
       - name: Install Pagefind
         run: npx pagefind --site public
       - name: Upload artifact

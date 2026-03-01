@@ -114,14 +114,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
   {{/* Favicon */}}
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="icon" type="image/svg+xml" href="{{ "/favicon.svg" | relURL }}" />
+  <link rel="icon" type="image/png" href="{{ "/favicon.png" | relURL }}" />
 
   {{/* Stylesheets */}}
   <link rel="stylesheet" href="{{ "/css/main.css" | relURL }}" />
 
   {{/* Pagefind */}}
-  <link rel="stylesheet" href="/pagefind/pagefind-ui.css" />
+  <link rel="stylesheet" href="{{ "/pagefind/pagefind-ui.css" | relURL }}" />
 
   {{/* RSS */}}
   {{ range .AlternativeOutputFormats }}
@@ -163,7 +163,7 @@
 
   {{/* Scripts */}}
   <script src="{{ "/js/main.js" | relURL }}" defer></script>
-  <script src="/pagefind/pagefind-ui.js" defer></script>
+  <script src="{{ "/pagefind/pagefind-ui.js" | relURL }}" defer></script>
   <script>
     window.addEventListener('DOMContentLoaded', function() {
       if (typeof PagefindUI !== 'undefined') {

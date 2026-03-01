@@ -3,8 +3,19 @@ title: "ElevenLabs レビュー (2026年3月版): 会話AI 2.0で「人間を超
 description: "2026年2月、ElevenLabsは「Conversational AI 2.0」を発表し、AI音声合成の新たな地平を切り開きました。自然なターンテイキング、多言語自動検出、統合RAGなど、人間を超える自然な対話を実現する最新技術を徹底解説します。"
 date: 2026-03-01
 tags: ["音声生成AI", "ElevenLabs", "会話AI", "マルチモダリティ"]
-categories: ["音声生成AI"]
+categories: ["業務効率化AI"]
 author: "AI Recipe Hub編集部"
+emoji: "🎙️"
+toolName: "ElevenLabs"
+toolTagline: "次世代AI音声合成＆会話AIプラットフォーム"
+rating: 4.5
+toolPrice: "$5〜$99/月"
+toolFreeplan: "あり（月10,000文字）"
+toolCategory: "音声生成AI"
+toolLanguage: "対応（32言語）"
+isNew: true
+affiliateUrl: "https://elevenlabs.io"
+officialUrl: "https://elevenlabs.io"
 ---
 
 ## 結論: ElevenLabsは「音声合成」から「対話AIプラットフォーム」へ

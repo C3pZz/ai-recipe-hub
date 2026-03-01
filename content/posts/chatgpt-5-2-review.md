@@ -5,6 +5,18 @@ date: 2026-03-01
 tags: ["文章生成AI", "OpenAI", "GPT-5.2"]
 categories: ["文章生成AI"]
 author: "AI Recipe Hub編集部"
+emoji: "🧠"
+toolName: "ChatGPT-5.2"
+toolTagline: "OpenAIの最新フラッグシップAIアシスタント"
+rating: 4.8
+toolPrice: "無料〜$200/月"
+toolFreeplan: "あり（制限付き）"
+toolCategory: "文章生成AI"
+toolLanguage: "完全対応"
+featured: true
+isNew: true
+affiliateUrl: "https://chat.openai.com"
+officialUrl: "https://openai.com"
 ---
 
 ## 結論: GPT-5.2は「仕事で使えるAI」の新たな標準

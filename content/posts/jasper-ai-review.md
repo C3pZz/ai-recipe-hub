@@ -5,6 +5,16 @@ date: 2026-03-01
 tags: ["マーケティングAI", "Jasper AI", "SEO", "AIエージェント"]
 categories: ["マーケティングAI"]
 author: "AI Recipe Hub編集部"
+emoji: "📝"
+toolName: "Jasper AI"
+toolTagline: "マーケティング特化型AI最適化エージェント"
+rating: 4.3
+toolPrice: "$49〜$125/月"
+toolFreeplan: "7日間無料トライアル"
+toolCategory: "マーケティングAI"
+toolLanguage: "対応（30+言語）"
+affiliateUrl: "https://www.jasper.ai"
+officialUrl: "https://www.jasper.ai"
 ---
 
 ## 結論: Jasperは「コンテンツ生成AI」から「マーケティング成果創出AI」へ

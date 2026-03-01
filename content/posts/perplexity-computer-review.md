@@ -5,6 +5,17 @@ date: 2026-03-01
 tags: ["業務効率化AI", "Perplexity AI", "AIエージェント", "リサーチ"]
 categories: ["業務効率化AI"]
 author: "AI Recipe Hub編集部"
+emoji: "🔍"
+toolName: "Perplexity Computer"
+toolTagline: "19のAIモデルが協調するリサーチ実行環境"
+rating: 4.5
+toolPrice: "$20〜$200/月"
+toolFreeplan: "あり（基本検索）"
+toolCategory: "業務効率化AI"
+toolLanguage: "完全対応"
+isNew: true
+affiliateUrl: "https://www.perplexity.ai"
+officialUrl: "https://www.perplexity.ai"
 ---
 
 ## 結論: Perplexityは「検索エンジン」から「リサーチ実行環境」へ

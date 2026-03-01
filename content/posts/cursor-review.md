@@ -5,6 +5,18 @@ date: 2026-03-01
 tags: ["コーディングAI", "Cursor", "AIエージェント", "開発環境"]
 categories: ["コーディングAI"]
 author: "AI Recipe Hub編集部"
+emoji: "⚡"
+toolName: "Cursor"
+toolTagline: "自律型AIエージェント搭載コードエディタ"
+rating: 4.9
+toolPrice: "$20/月〜"
+toolFreeplan: "あり（Hobbyプラン）"
+toolCategory: "コーディングAI"
+toolLanguage: "完全対応"
+isNew: true
+isPopular: true
+affiliateUrl: "https://cursor.com"
+officialUrl: "https://cursor.com"
 ---
 
 ## 結論: Cursorは「AI搭載エディタ」から「AI開発者チーム」へ

@@ -5,6 +5,17 @@ date: 2026-03-01
 tags: ["文章生成AI", "Anthropic", "Claude 4.6", "エージェント"]
 categories: ["文章生成AI"]
 author: "AI Recipe Hub編集部"
+emoji: "🤖"
+toolName: "Claude 4.6 Sonnet"
+toolTagline: "Anthropicの高コスパAIエージェント"
+rating: 4.7
+toolPrice: "API: $3/$15 (M tokens)"
+toolFreeplan: "あり（claude.ai無料枠）"
+toolCategory: "文章生成AI"
+toolLanguage: "完全対応"
+isNew: true
+affiliateUrl: "https://claude.ai"
+officialUrl: "https://www.anthropic.com"
 ---
 
 ## 結論: Claude 4.6 Sonnetは「賢くて安い」新時代の仕事道具
