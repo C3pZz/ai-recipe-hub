@@ -1,4 +1,4 @@
-baseURL: "https://airecipehub.com/"
+baseURL = "https://c3pzz.github.io/ai-recipe-hub/"
 languageCode: "ja"
 title: "AI Recipe Hub"
 theme: "airecipe"
