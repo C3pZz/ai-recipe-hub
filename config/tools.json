@@ -1,0 +1,48 @@
+{
+  "tools": [
+    {
+      "name": "Kling",
+      "version": "3.0",
+      "api_available": true,
+      "api_endpoint": "https://api.klingai.com/v1/videos/text2video",
+      "cost_per_video_usd": 0.28,
+      "affiliate_links": {
+        "direct": "https://klingai.com/"
+      }
+    },
+    {
+      "name": "Runway",
+      "version": "Gen-3 Alpha Turbo",
+      "api_available": true,
+      "api_endpoint": "https://api.dev.runwayml.com/v1/",
+      "cost_per_video_usd": 0.50,
+      "affiliate_links": {
+        "direct": "https://runwayml.com/"
+      }
+    },
+    {
+      "name": "Sora",
+      "version": "2",
+      "api_available": false,
+      "api_endpoint": null,
+      "cost_per_video_usd": null,
+      "affiliate_links": {}
+    },
+    {
+      "name": "Pika",
+      "version": "2.2",
+      "api_available": true,
+      "api_endpoint": "https://api.pika.art/v1/generate",
+      "cost_per_video_usd": 0.30,
+      "affiliate_links": {}
+    },
+    {
+      "name": "Veo",
+      "version": "3.1",
+      "api_available": false,
+      "api_endpoint": null,
+      "cost_per_video_usd": null,
+      "affiliate_links": {}
+    }
+  ]
+}

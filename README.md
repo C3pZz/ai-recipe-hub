@@ -1,215 +1,269 @@
-# AI Recipe Hub
+# AI Recipe Hub Ver2 — AI動画生成特化型メディア
 
-**AIツール比較・レビュー専門メディア**
+> AI動画生成ツールの比較・レビュー・テクニックを発信する自動運用メディアサイト
 
-文章生成・画像生成・コーディング・業務効率化など、あらゆるカテゴリのAIツールを徹底比較するメディアサイトです。
+## 概要
+
+AI Recipe Hub Ver2は、AI動画生成（Sora 2、Runway Gen-4.5、Kling 2.6、Pika 2.5、Veo 3.1等）に特化した情報メディアです。Hugoで構築された静的サイトに、Pythonスクリプトによる自動コンテンツ生成・SNS投稿機能を組み合わせた、半自動運用型のブログシステムです。
+
+### キャラクター「ハク」
+
+サイトのナビゲーターは、忍野忍風のAIエージェント「ハク」。500年以上の知見を持つ（という設定の）AI動画生成の専門家が、独自の口調で最新情報を解説します。
 
 ## 技術スタック
 
-| 技術 | 用途 |
-|------|------|
-| **Hugo v0.141.0** | 静的サイトジェネレーター |
-| **Pagefind v1.4.0** | 静的サイト向け検索機能 |
-| **カスタムテーマ (airecipe)** | モダンテック系デザイン |
-| **GitHub Actions** | 自動ビルド・デプロイ・記事生成 |
-| **OpenAI API** | 記事自動生成 (gpt-4o-mini) |
+| 技術 | バージョン | 用途 |
+|------|-----------|------|
+| Hugo Extended | v0.141.0+ | 静的サイトジェネレーター |
+| Python | 3.10+ | 自動化スクリプト |
+| Pagefind | v1.4.0 | 静的サイト内検索 |
+| GitHub Actions | - | CI/CD・自動運用 |
+| OpenAI API | GPT-4.1-mini | 記事生成・テキスト分析 |
+| Serper API | - | Google検索結果取得 |
+| X (Twitter) API | v2 | SNS自動投稿 |
+
+## アーキテクチャ
+
+```
+┌─────────────────────────────────────────────────┐
+│                  GitHub Actions                  │
+│  ┌──────────┐  ┌──────────┐  ┌───────────────┐  │
+│  │  Daily    │  │  X Post  │  │   Monthly     │  │
+│  │Automation │  │ (週2回)  │  │   Package     │  │
+│  └────┬─────┘  └────┬─────┘  └──────┬────────┘  │
+│       │              │               │           │
+│  ┌────▼──────────────▼───────────────▼────────┐  │
+│  │           Python Scripts (scripts/)         │  │
+│  │  collect_trends.py  │  collect_ugc.py      │  │
+│  │  generate_article.py│  generate_x_thread.py│  │
+│  │  post_to_x.py       │  monthly_package.py  │  │
+│  └────────────────────┬───────────────────────┘  │
+│                       │                          │
+│  ┌────────────────────▼───────────────────────┐  │
+│  │              Hugo Static Site               │  │
+│  │  content/posts/ → 記事Markdown              │  │
+│  │  themes/airecipehub/ → カスタムテーマ       │  │
+│  └────────────────────┬───────────────────────┘  │
+│                       │                          │
+│  ┌────────────────────▼───────────────────────┐  │
+│  │           GitHub Pages (公開)               │  │
+│  └────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────┘
+```
 
 ## ディレクトリ構成
 
 ```
 ai-recipe-hub/
-├── .github/
-│   └── workflows/
-│       ├── deploy.yml          # GitHub Pages自動デプロイ
-│       └── auto-generate.yml   # 記事自動生成（毎日09:00 JST）
+├── .github/workflows/           # GitHub Actions ワークフロー
+│   ├── daily-automation.yml     # 毎日の自動処理（トレンド収集→記事生成）
+│   ├── x-post.yml               # X(Twitter)自動投稿（週2回）
+│   └── monthly-package.yml      # 月次コンテンツパッケージ生成
+├── config/
+│   ├── settings.json            # 運用設定（API上限、コスト管理等）
+│   └── tools.json               # AI動画生成ツールのマスターデータ
 ├── content/
-│   ├── posts/                  # レビュー記事（Markdown）
-│   ├── about.md
-│   ├── comparison.md
-│   ├── contact.md
-│   ├── newsletter.md
-│   ├── privacy.md
-│   ├── affiliate-disclosure.md
-│   └── search.md
+│   ├── posts/                   # ブログ記事（Markdown）
+│   ├── about.md                 # サイト概要ページ
+│   ├── comparison.md            # ツール比較ページ
+│   ├── privacy.md               # プライバシーポリシー
+│   └── search.md                # 検索ページ
 ├── data/
-│   └── tools_queue.json        # 記事生成キュー
+│   ├── trends/                  # トレンド収集結果（JSON）
+│   ├── ugc/                     # UGC収集結果（JSON）
+│   ├── threads/                 # 生成されたXスレッド（JSON）
+│   ├── packages/                # 月次パッケージ（JSON）
+│   ├── logs/                    # 実行ログ
+│   └── metrics/                 # 収益指標データ
 ├── scripts/
-│   ├── generate_article.py     # 記事自動生成スクリプト
-│   ├── check_cost_limit.py     # APIコスト上限チェック（停止スイッチ）
-│   ├── log_generation.py       # 生成ログ記録
-│   └── gen_og_image.py         # OGイメージ生成
-├── static/
-│   ├── images/
-│   │   └── og-image.png
-│   ├── favicon.svg
-│   └── robots.txt
-├── themes/
-│   └── airecipe/               # カスタムテーマ
-│       ├── layouts/
-│       │   ├── _default/
-│       │   │   ├── baseof.html  # ベーステンプレート（SEO・OGP・構造化データ）
-│       │   │   ├── single.html  # 記事ページ（ツール情報ボックス・アフィリエイトCTA）
-│       │   │   └── list.html    # 一覧ページ
-│       │   ├── index.html       # トップページ
-│       │   ├── index.json       # 検索インデックス用JSON
-│       │   ├── page/
-│       │   │   └── search.html  # 検索ページ
-│       │   ├── partials/
-│       │   │   ├── header.html
-│       │   │   ├── footer.html
-│       │   │   └── search.html
-│       │   └── 404.html
-│       └── static/
-│           ├── css/main.css     # メインCSS（ダークモード・レスポンシブ）
-│           └── js/main.js       # メインJS（検索・アフィリエイトトラッキング）
-├── logs/                        # 記事生成ログ（自動作成）
-├── public/                      # ビルド出力（Gitignore対象）
-├── hugo.yaml                    # Hugo設定
+│   ├── config.py                # 共通設定・ユーティリティ
+│   ├── collect_trends.py        # トレンド収集スクリプト
+│   ├── collect_ugc.py           # UGC収集・分析スクリプト
+│   ├── generate_article.py      # 記事自動生成スクリプト
+│   ├── generate_x_thread.py     # Xスレッド生成スクリプト
+│   ├── post_to_x.py             # X自動投稿スクリプト
+│   └── monthly_package.py       # 月次パッケージ生成スクリプト
+├── themes/airecipehub/          # Hugoカスタムテーマ
+├── hugo.yaml                    # Hugo設定ファイル
 ├── build.sh                     # ビルドスクリプト
-└── README.md
+├── requirements.txt             # Python依存パッケージ
+└── README.md                    # このファイル
 ```
 
-## セットアップ
+## セットアップ手順
 
-### 必要なツール
+### 1. 前提条件
 
 - Hugo Extended v0.128.0以上
-- Node.js v18以上
-- Python 3.9以上
+- Python 3.10以上
+- Git 2.30以上
+- Node.js v18以上（Pagefind用）
 
-### インストール
-
-```bash
-# Hugoのインストール (Ubuntu)
-wget https://github.com/gohugoio/hugo/releases/download/v0.141.0/hugo_extended_0.141.0_linux-amd64.deb
-sudo dpkg -i hugo_extended_0.141.0_linux-amd64.deb
-
-# Pagefindのインストール
-npm install -g pagefind
-
-# Pythonパッケージのインストール
-pip install openai
-```
-
-### ローカル開発
+### 2. リポジトリのクローン
 
 ```bash
-# 開発サーバー起動
-hugo server
-
-# ビルド
-./build.sh
-
-# ビルド + ローカルサーバー起動
-./build.sh --serve
+git clone https://github.com/C3pZz/ai-recipe-hub.git
+cd ai-recipe-hub
 ```
 
-## 記事の追加方法
-
-### 手動で記事を追加
-
-`content/posts/` ディレクトリに Markdown ファイルを作成します。
+### 3. Python依存パッケージのインストール
 
 ```bash
-# 新規記事の作成
-hugo new posts/tool-name-review.md
+pip install -r requirements.txt
 ```
 
-フロントマターのテンプレート:
+### 4. 環境変数の設定
 
-```yaml
----
-title: "ツール名 レビュー：キャッチーなタイトル"
-date: 2026-03-01
-description: "SEO最適化されたメタディスクリプション（120文字以内）"
-categories: ["文章生成AI"]
-tags: ["ツール名", "カテゴリ"]
-emoji: "🤖"
-toolName: "ツール名"
-toolTagline: "キャッチーな説明（30文字以内）"
-toolPrice: "無料 / $20/月〜"
-toolFreeplan: "あり"
-toolCategory: "文章生成AI"
-toolLanguage: "対応"
-rating: 4.5
-affiliateUrl: "https://example.com/?ref=airecipehub"
-officialUrl: "https://example.com/"
-featured: false
-isNew: true
-isPopular: false
-draft: false
----
-```
-
-### 自動生成（OpenAI API）
+以下の環境変数を設定してください。`.env` ファイルを作成するか、システム環境変数として設定します。
 
 ```bash
-# 特定のツールの記事を生成
-python3 scripts/generate_article.py --tool-name "Gemini 2.0" --category "文章生成AI"
+# .env ファイルの例
+# ===========================
 
-# キューから自動選択して生成
-python3 scripts/generate_article.py
+# Serper API（Google検索API）- トレンド収集・UGC収集に使用
+SERPER_API_KEY=your_serper_api_key_here
+
+# OpenAI API（GPT-4.1系）- 記事生成・分析に使用
+OPENAI_API_KEY=your_openai_api_key_here
+
+# X (Twitter) API - SNS自動投稿に使用
+X_API_KEY=your_x_api_key_here
+X_API_SECRET=your_x_api_secret_here
+X_ACCESS_TOKEN=your_x_access_token_here
+X_ACCESS_TOKEN_SECRET=your_x_access_token_secret_here
+X_BEARER_TOKEN=your_x_bearer_token_here
 ```
 
-環境変数:
-- `OPENAI_API_KEY`: OpenAI APIキー（必須）
-- `OPENAI_MODEL`: 使用モデル（デフォルト: `gpt-4o-mini`）
+#### APIキーの取得方法
 
-## GitHub Pages へのデプロイ
+| API | 取得先 | 用途 | 無料枠 |
+|-----|--------|------|--------|
+| Serper API | [serper.dev](https://serper.dev) | Google検索結果の取得 | 2,500回/月 |
+| OpenAI API | [platform.openai.com](https://platform.openai.com) | 記事生成・テキスト分析 | 従量課金 |
+| X API | [developer.x.com](https://developer.x.com) | SNS自動投稿 | Free tier: 投稿のみ |
 
-### 初期設定
+### 5. GitHub Secretsの設定（自動運用時）
 
-1. GitHubリポジトリを作成
-2. Settings > Pages > Source を「GitHub Actions」に設定
-3. Secrets に `OPENAI_API_KEY` を追加（記事自動生成を使う場合）
-4. Variables に以下を設定:
-   - `HUGO_BASE_URL`: サイトのURL（例: `https://username.github.io/ai-recipe-hub/`）
-   - `MONTHLY_COST_LIMIT_USD`: 月間APIコスト上限（デフォルト: `10`）
+GitHub Actionsで自動運用する場合、リポジトリの Settings → Secrets and variables → Actions に以下を登録してください：
 
-### デプロイ
+- `SERPER_API_KEY`
+- `OPENAI_API_KEY`
+- `X_API_KEY`
+- `X_API_SECRET`
+- `X_ACCESS_TOKEN`
+- `X_ACCESS_TOKEN_SECRET`
+- `X_BEARER_TOKEN`
+
+### 6. ローカルでの動作確認
 
 ```bash
-git push origin main
+# Hugoサーバーを起動
+hugo server -D
+
+# トレンド収集のテスト（APIキー設定後）
+python scripts/collect_trends.py
+
+# UGC収集のテスト（APIキー設定後）
+python scripts/collect_ugc.py
 ```
 
-`main` ブランチへのプッシュで自動的にビルド・デプロイが実行されます。
+## 自動運用フロー
 
-## 収益化
+### 日次処理（毎日 UTC 0:00 / JST 9:00）
 
-### アフィリエイトリンクの設置
+1. `collect_trends.py` — AI動画生成関連の最新トレンドを収集
+2. `collect_ugc.py` — ユーザーレビュー・体験談を収集・分析
+3. `generate_article.py` — 収集データを基に記事を自動生成
+4. Hugo ビルド → GitHub Pages にデプロイ
 
-各記事のフロントマターに `affiliateUrl` を設定するだけで、自動的にアフィリエイトCTAボタンが表示されます。
+### 週次処理（火曜・金曜 UTC 3:00 / JST 12:00）
 
-```yaml
-affiliateUrl: "https://example.com/?ref=airecipehub"
+1. `generate_x_thread.py` — 最新記事からXスレッドを生成
+2. `post_to_x.py` — Xに自動投稿
+
+### 月次処理（毎月1日 UTC 6:00 / JST 15:00）
+
+1. `monthly_package.py` — 月間ベスト記事・トレンドサマリーを生成
+
+## コスト管理
+
+`config/settings.json` でAPI呼び出しの上限を設定しています：
+
+| 項目 | 上限 | 推定月額コスト |
+|------|------|---------------|
+| Serper API | 100回/日 | 無料枠内 |
+| OpenAI API (GPT-4.1-mini) | 50回/日 | 約$5〜15/月 |
+| X API | 10投稿/日 | 無料 |
+
+月間合計推定コスト: **$5〜15/月**
+
+## 停止スイッチ
+
+緊急時にすべての自動処理を停止するには：
+
+1. **GitHub Actionsの無効化**: 各ワークフローを手動で Disable
+2. **設定ファイルで停止**: `config/settings.json` の `enabled` を `false` に変更
+
+```json
+{
+  "automation": {
+    "enabled": false
+  }
+}
 ```
 
-### 主要アフィリエイトプログラム
+## カテゴリ構成
 
-| ツール | プログラム | 報酬 |
-|--------|-----------|------|
-| Jasper AI | Impact.com | 30% 継続報酬 |
-| Copy.ai | PartnerStack | 45% 初回 |
-| Writesonic | 直接申込 | 30% 継続報酬 |
-| Surfer SEO | PartnerStack | 25% 継続報酬 |
+| カテゴリ | スラッグ | 内容 |
+|----------|----------|------|
+| ツール比較 | tool-comparison | AI動画生成ツールの比較・レビュー |
+| プロンプトレシピ | prompt-recipe | 効果的なプロンプトの書き方 |
+| テクニック | technique | 品質改善・応用テクニック |
+| マネタイズ | monetize | 収益化・ビジネス活用 |
+| 初心者ガイド | beginner-guide | 入門者向けの解説 |
+| UGC分析 | ugc-analysis | ユーザーレビュー・体験談の分析 |
 
-## 自動化の停止スイッチ
+## 収益モデル
 
-記事自動生成を停止するには:
+| 収益源 | 収益発生条件 | 主要KPI |
+|--------|-------------|---------|
+| Google AdSense | PV数に応じた広告収入 | CTR, RPM |
+| アフィリエイト | ツール紹介リンク経由の成約 | CVR, EPC |
+| note有料記事 | 月次パッケージの販売 | 購入数, LTV |
 
-1. **GitHub Actions から無効化**: GitHub > Actions > Auto Generate Articles > Disable workflow
-2. **コスト上限による自動停止**: 月間APIコストが `MONTHLY_COST_LIMIT_USD` を超えると自動停止
-3. **ログ確認**: `logs/generation_log.jsonl` で生成履歴とコストを確認
+### KPI目標
 
-## KPI・収益指標
+| 指標 | 短期目標（3ヶ月） | 中期目標（6ヶ月） |
+|------|-------------------|-------------------|
+| 月間PV | 5,000 | 30,000 |
+| 記事数 | 100本 | 250本 |
+| X フォロワー | 500 | 2,000 |
+| 月間収益 | ¥5,000 | ¥30,000 |
 
-| 指標 | 目標 | 測定方法 |
-|------|------|---------|
-| 月間PV | 10,000 | Google Analytics |
-| 記事数 | 100本/月 | logs/generation_log.jsonl |
-| アフィリエイト収益 | $500/月 | 各ASPダッシュボード |
-| CVR | 2〜5% | アフィリエイトASP |
-| 月間APIコスト | $10以下 | logs/generation_log.jsonl |
+## スクリプトの個別実行
+
+```bash
+# トレンド収集
+python scripts/collect_trends.py
+
+# UGC収集
+python scripts/collect_ugc.py
+
+# 記事生成（トレンドデータから自動選択）
+python scripts/generate_article.py
+
+# 記事生成（テーマ指定）
+python scripts/generate_article.py --topic "Sora 2の新機能レビュー"
+
+# Xスレッド生成
+python scripts/generate_x_thread.py
+
+# X投稿
+python scripts/post_to_x.py
+
+# 月次パッケージ生成
+python scripts/monthly_package.py
+```
 
 ## ライセンス
 

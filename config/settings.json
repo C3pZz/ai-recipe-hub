@@ -1,0 +1,34 @@
+{
+  "cost_limits": {
+    "monthly_total_usd": 100,
+    "daily_openai_usd": 5,
+    "daily_serper_queries": 50,
+    "monthly_x_posts": 150
+  },
+  "api": {
+    "openai_model": "gpt-4o-mini",
+    "openai_max_tokens_article": 4000,
+    "openai_max_tokens_thread": 1500,
+    "openai_temperature_article": 0.7,
+    "openai_temperature_thread": 0.9,
+    "serper_results_per_query": 5,
+    "serper_country": "jp",
+    "serper_language": "ja"
+  },
+  "schedule": {
+    "daily_collect_hour_jst": 6,
+    "daily_post_hour_jst": 11.75,
+    "monthly_package_day": 28
+  },
+  "x_posting": {
+    "jitter_max_seconds": 1800,
+    "tweet_interval_min_seconds": 5,
+    "tweet_interval_max_seconds": 15,
+    "max_retries": 3
+  },
+  "site": {
+    "base_url": "https://c3pzz.github.io/ai-recipe-hub/",
+    "author": "ハク",
+    "max_articles_per_day": 2
+  }
+}

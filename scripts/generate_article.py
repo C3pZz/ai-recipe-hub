@@ -1,262 +1,266 @@
 #!/usr/bin/env python3
 """
-AI Recipe Hub - 記事自動生成スクリプト
-OpenAI API (gpt-4o-mini) を使用してAIツールのレビュー記事を生成します。
+generate_article.py - Hugo用Markdown記事を自動生成するスクリプト
 
-使用方法:
-  python3 scripts/generate_article.py --tool-name "ChatGPT" --category "文章生成AI"
-  python3 scripts/generate_article.py  # ツール名省略時は自動選択
+収集したトレンド情報とUGCデータを元に、OpenAI API (gpt-4o-mini) を使って
+Hugo用のMarkdown記事を生成する。記事は「ハク」の口調（忍野忍風）で書かれる。
 
-環境変数:
-  OPENAI_API_KEY: OpenAI APIキー (必須)
-  OPENAI_MODEL: 使用するモデル (デフォルト: gpt-4o-mini)
+実行タイミング: 毎日 AM7:00 JST（情報収集の後に実行）
+出力先: content/posts/YYYY-MM-DD-{slug}.md
 """
 
-import os
 import sys
+import os
 import json
-import argparse
 import re
+import unicodedata
 from datetime import datetime
-from pathlib import Path
+from openai import OpenAI
 
-try:
-    from openai import OpenAI
-except ImportError:
-    print("ERROR: openai パッケージがインストールされていません。")
-    print("  pip install openai")
-    sys.exit(1)
+from config import (
+    OPENAI_API_KEY, OPENAI_MODEL, OPENAI_MAX_TOKENS_ARTICLE,
+    OPENAI_TEMPERATURE_ARTICLE, ARTICLE_SYSTEM_PROMPT,
+    TODAY, CONTENT_DIR, TRENDS_DIR, UGC_DIR, TOOL_NAMES,
+    MAX_ARTICLES_PER_DAY, check_cost_limit, add_cost,
+    setup_logger, log_json, JST
+)
 
-# ============================================================
-# 設定
-# ============================================================
-CONTENT_DIR = Path(__file__).parent.parent / "content" / "posts"
-LOGS_DIR = Path(__file__).parent.parent / "logs"
-TOOLS_DATA_FILE = Path(__file__).parent.parent / "data" / "tools_queue.json"
+logger = setup_logger("generate_article", "generate.log")
 
-CATEGORIES = [
-    "文章生成AI",
-    "画像生成AI",
-    "コーディングAI",
-    "業務効率化AI",
-    "マーケティングAI",
-]
 
-# 記事生成プロンプトテンプレート
-ARTICLE_PROMPT_TEMPLATE = """
-あなたは「AI Recipe Hub」というAIツール専門メディアの編集者です。
-以下の情報をもとに、SEOに最適化された高品質な日本語レビュー記事を作成してください。
+def get_openai_client() -> OpenAI:
+    """OpenAIクライアントを初期化して返す"""
+    if not OPENAI_API_KEY:
+        logger.error("OPENAI_API_KEY が設定されていません")
+        sys.exit(1)
+    return OpenAI(api_key=OPENAI_API_KEY)
 
-## 対象ツール
-- ツール名: {tool_name}
-- カテゴリ: {category}
-- 追加情報: {additional_info}
+
+def load_today_trends() -> dict:
+    """本日のトレンドデータを読み込む"""
+    trends_file = TRENDS_DIR / f"{TODAY}.json"
+    if trends_file.exists():
+        with open(trends_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    logger.warning(f"トレンドデータが見つかりません: {trends_file}")
+    return {"results": []}
+
+
+def load_today_ugc() -> dict:
+    """本日のUGCデータを読み込む"""
+    ugc_file = UGC_DIR / f"{TODAY}.json"
+    if ugc_file.exists():
+        with open(ugc_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    logger.warning(f"UGCデータが見つかりません: {ugc_file}")
+    return {"articles": []}
+
+
+def select_article_topic(trends: dict, ugc: dict) -> dict:
+    """
+    トレンドとUGCデータから、記事のトピックを選定する。
+
+    最もデータが豊富なツールを優先的に選ぶ。
+
+    Returns:
+        トピック情報の辞書
+    """
+    # ツールごとのデータ量をカウント
+    tool_scores = {}
+    for tool in TOOL_NAMES:
+        trend_count = len([r for r in trends.get("results", []) if r.get("tool") == tool])
+        ugc_count = len([a for a in ugc.get("articles", []) if a.get("tool") == tool])
+        tool_scores[tool] = trend_count + ugc_count * 2  # UGCを重み付け
+
+    # スコアが最も高いツールを選択
+    if tool_scores:
+        best_tool = max(tool_scores, key=tool_scores.get)
+    else:
+        best_tool = TOOL_NAMES[0] if TOOL_NAMES else "AI動画生成"
+
+    # 該当ツールのデータを抽出
+    tool_trends = [r for r in trends.get("results", []) if r.get("tool") == best_tool]
+    tool_ugc = [a for a in ugc.get("articles", []) if a.get("tool") == best_tool]
+
+    return {
+        "tool": best_tool,
+        "trends": tool_trends[:5],  # 上位5件
+        "ugc": tool_ugc[:3],  # 上位3件
+        "score": tool_scores.get(best_tool, 0)
+    }
+
+
+def slugify(text: str) -> str:
+    """日本語テキストをURL用のスラッグに変換する"""
+    # ASCII文字以外を除去してスラッグ化
+    text = text.lower().strip()
+    text = re.sub(r'[【】「」『』（）\(\)\[\]]+', '', text)
+    text = re.sub(r'[^\w\s-]', '', text)
+    text = re.sub(r'[\s_]+', '-', text)
+    text = re.sub(r'-+', '-', text)
+    text = text.strip('-')
+    # 日本語が残っている場合はハッシュで短縮
+    if any(ord(c) > 127 for c in text):
+        import hashlib
+        text = hashlib.md5(text.encode()).hexdigest()[:12]
+    return text or "article"
+
+
+def generate_article_content(client: OpenAI, topic: dict) -> str:
+    """
+    OpenAI APIを使って記事を生成する。
+
+    Args:
+        client: OpenAIクライアント
+        topic: トピック情報
+
+    Returns:
+        生成されたMarkdown記事（front matter付き）
+    """
+    tool_name = topic["tool"]
+    trends_summary = json.dumps(
+        [{"title": t["title"], "snippet": t["snippet"]} for t in topic["trends"]],
+        ensure_ascii=False
+    )
+    ugc_summary = json.dumps(
+        [{"title": u["title"], "text_preview": u.get("text_preview", "")} for u in topic["ugc"]],
+        ensure_ascii=False
+    )
+
+    user_prompt = f"""以下のデータを基に、{tool_name}に関する実践的なブログ記事を生成してください。
+
+## 最新トレンド情報
+{trends_summary}
+
+## 日本人ユーザーの声（UGC）
+{ugc_summary}
 
 ## 記事の要件
-1. 文字数: 1500〜2500文字
-2. 読者: AIツールの導入を検討しているビジネスパーソン・中小企業
-3. 目的: ツールの理解を深め、アフィリエイトリンクへの誘導
-4. トーン: 専門的だが分かりやすい。具体的な数値や事例を含める
+- Hugo用のMarkdown形式で出力すること
+- 最初にYAML front matterを含めること（---で囲む）
+- front matterには以下を含める:
+  - title: 記事タイトル（SEOを意識、30〜60文字）
+  - description: 記事の説明（120文字以内）
+  - date: {TODAY}
+  - categories: 適切なカテゴリ1つ（tool-comparison, prompt-recipe, monetize, beginner-guide, ugc-analysis, technique のいずれか）
+  - tags: 関連タグ3〜5個
+  - author: ハク
+  - emoji: 記事を象徴する絵文字1つ
+- 記事本文は2000〜3000文字程度
+- 見出し（h2, h3）を適切に使う
+- 具体的な数値やプロンプト例を含める
+- 最後に「まとめ」セクションを入れる
 
-## 必須セクション
-1. ツール概要 (h2)
-2. 主な機能と使い方 (h2) - 具体的な手順を含む
-3. 料金プラン (h2) - 表形式で比較
-4. ユースケース (h2) - 具体的な業務シーン
-5. プロンプト例 (h2) - コードブロックで実際のプロンプトを提示
-6. まとめ (h2)
+記事全体を「ハク」の口調で書いてください。"""
 
-## 出力形式
-以下のYAMLフロントマターを含むMarkdown形式で出力してください。
-他のテキストは含めず、Markdownのみを出力してください。
+    try:
+        response = client.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": ARTICLE_SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt}
+            ],
+            max_tokens=OPENAI_MAX_TOKENS_ARTICLE,
+            temperature=OPENAI_TEMPERATURE_ARTICLE,
+        )
 
----
-title: "[記事タイトル]"
-date: {date}
-description: "[SEO最適化されたメタディスクリプション（120文字以内）]"
-categories: ["{category}"]
-tags: ["[タグ1]", "[タグ2]", "[タグ3]"]
-emoji: "[ツールに合った絵文字1文字]"
-toolName: "{tool_name}"
-toolTagline: "[キャッチーなツールの説明（30文字以内）]"
-toolPrice: "[価格帯（例：無料 / $20/月〜）]"
-toolFreeplan: "[あり/なし]"
-toolCategory: "{category}"
-toolLanguage: "[日本語対応状況]"
-rating: [3.5〜5.0の評価]
-affiliateUrl: "[公式サイトURL]"
-officialUrl: "[公式サイトURL]"
-featured: false
-isNew: true
-isPopular: false
-draft: false
----
+        # コスト計算（gpt-4o-mini: input $0.15/1M, output $0.60/1M）
+        usage = response.usage
+        cost = (usage.prompt_tokens * 0.15 + usage.completion_tokens * 0.60) / 1_000_000
+        add_cost(cost, "openai_article")
+        logger.info(f"記事生成完了: {usage.prompt_tokens} input + {usage.completion_tokens} output tokens (${cost:.4f})")
 
-[記事本文]
-"""
+        return response.choices[0].message.content
+
+    except Exception as e:
+        logger.error(f"OpenAI API エラー: {e}")
+        return ""
 
 
-def load_tools_queue() -> list:
-    """ツールキューからツール情報を読み込む"""
-    if TOOLS_DATA_FILE.exists():
-        with open(TOOLS_DATA_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data.get("queue", [])
-    return []
+def save_article(content: str) -> str:
+    """
+    生成された記事をファイルに保存する。
 
+    Args:
+        content: Markdown記事の内容
 
-def get_existing_articles() -> set:
-    """既存の記事のツール名セットを返す"""
-    existing = set()
-    if CONTENT_DIR.exists():
-        for md_file in CONTENT_DIR.glob("*.md"):
-            # ファイル名からツール名を推測
-            existing.add(md_file.stem.lower())
-    return existing
+    Returns:
+        保存されたファイルパス
+    """
+    if not content:
+        logger.error("記事の内容が空です")
+        return ""
 
+    # front matterからタイトルを抽出してスラッグ化
+    title_match = re.search(r'title:\s*["\']?(.+?)["\']?\s*$', content, re.MULTILINE)
+    if title_match:
+        title = title_match.group(1).strip('"').strip("'")
+        slug = slugify(title)
+    else:
+        slug = "article"
 
-def select_tool(tool_name: str, category: str) -> tuple:
-    """生成するツールを選択する"""
-    if tool_name:
-        return tool_name, category if category != "自動選択" else "文章生成AI"
-
-    # キューからツールを選択
-    queue = load_tools_queue()
-    existing = get_existing_articles()
-
-    for tool in queue:
-        tool_slug = tool.get("name", "").lower().replace(" ", "-")
-        if tool_slug not in existing:
-            return tool.get("name"), tool.get("category", "文章生成AI")
-
-    # キューが空の場合はデフォルトのツールリストから選択
-    default_tools = [
-        ("Gemini 2.0 Flash", "文章生成AI"),
-        ("Stable Diffusion 3", "画像生成AI"),
-        ("GitHub Copilot", "コーディングAI"),
-        ("Otter.ai", "業務効率化AI"),
-        ("Surfer SEO", "マーケティングAI"),
-    ]
-
-    for tool_name, cat in default_tools:
-        slug = tool_name.lower().replace(" ", "-").replace(".", "")
-        if slug not in existing:
-            return tool_name, cat
-
-    return "Claude 3.5 Haiku", "文章生成AI"
-
-
-def generate_article(tool_name: str, category: str) -> str:
-    """OpenAI APIを使って記事を生成する"""
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        raise ValueError("OPENAI_API_KEY 環境変数が設定されていません")
-
-    model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-    client = OpenAI(api_key=api_key)
-
-    today = datetime.now().strftime("%Y-%m-%d")
-
-    prompt = ARTICLE_PROMPT_TEMPLATE.format(
-        tool_name=tool_name,
-        category=category,
-        additional_info="最新の公式情報をもとに、正確な情報を提供してください。",
-        date=today,
-    )
-
-    print(f"[INFO] OpenAI API ({model}) を使って記事を生成中: {tool_name}")
-
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {
-                "role": "system",
-                "content": "あなたはAIツール専門メディアの編集者です。SEOに最適化された高品質な日本語レビュー記事を作成します。",
-            },
-            {"role": "user", "content": prompt},
-        ],
-        max_tokens=3000,
-        temperature=0.7,
-    )
-
-    content = response.choices[0].message.content
-    usage = response.usage
-
-    print(f"[INFO] 生成完了: {usage.total_tokens} トークン使用")
-    print(f"[INFO] 推定コスト: ${usage.total_tokens * 0.00000015:.6f} (gpt-4o-mini)")
-
-    return content, usage
-
-
-def save_article(content: str, tool_name: str) -> Path:
-    """生成した記事を保存する"""
-    # ファイル名を生成
-    slug = tool_name.lower()
-    slug = re.sub(r'[^\w\s-]', '', slug)
-    slug = re.sub(r'[\s_]+', '-', slug)
-    slug = slug.strip('-')
-
-    today = datetime.now().strftime("%Y-%m-%d")
-    filename = f"{slug}-review.md"
+    filename = f"{TODAY}-{slug}.md"
     filepath = CONTENT_DIR / filename
 
-    # 既存ファイルが存在する場合は日付を追加
-    if filepath.exists():
-        filename = f"{slug}-review-{today}.md"
-        filepath = CONTENT_DIR / filename
-
-    CONTENT_DIR.mkdir(parents=True, exist_ok=True)
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(content)
 
-    print(f"[INFO] 記事を保存しました: {filepath}")
-    return filepath
-
-
-def log_result(tool_name: str, category: str, filepath: Path, usage) -> None:
-    """生成結果をログに記録する"""
-    LOGS_DIR.mkdir(parents=True, exist_ok=True)
-
-    log_file = LOGS_DIR / "generation_log.jsonl"
-    log_entry = {
-        "timestamp": datetime.now().isoformat(),
-        "tool_name": tool_name,
-        "category": category,
-        "file": str(filepath),
-        "tokens_used": usage.total_tokens if usage else 0,
-        "estimated_cost_usd": usage.total_tokens * 0.00000015 if usage else 0,
-        "model": os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
-        "status": "success",
-    }
-
-    with open(log_file, "a", encoding="utf-8") as f:
-        f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
-
-    print(f"[INFO] ログを記録しました: {log_file}")
+    logger.info(f"記事を保存: {filepath}")
+    return str(filepath)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="AI Recipe Hub 記事自動生成スクリプト")
-    parser.add_argument("--tool-name", type=str, default="", help="生成するAIツール名")
-    parser.add_argument("--category", type=str, default="自動選択", help="カテゴリ")
-    args = parser.parse_args()
+    """メイン処理: トレンド・UGCデータを元に記事を生成する"""
+    logger.info("=" * 60)
+    logger.info(f"記事生成開始: {TODAY}")
+    logger.info("=" * 60)
 
-    # ツールを選択
-    tool_name, category = select_tool(args.tool_name, args.category)
-    print(f"[INFO] 対象ツール: {tool_name} ({category})")
+    # コスト上限チェック
+    if check_cost_limit():
+        logger.warning("月間コスト上限に到達。記事生成をスキップします。")
+        sys.exit(0)
 
-    # 記事を生成
-    content, usage = generate_article(tool_name, category)
+    # データ読み込み
+    trends = load_today_trends()
+    ugc = load_today_ugc()
 
-    # 記事を保存
-    filepath = save_article(content, tool_name)
+    if not trends.get("results") and not ugc.get("articles"):
+        logger.warning("トレンド・UGCデータが空です。記事生成をスキップします。")
+        sys.exit(0)
 
-    # ログを記録
-    log_result(tool_name, category, filepath, usage)
+    # OpenAIクライアント初期化
+    client = get_openai_client()
 
-    print(f"[SUCCESS] 記事生成完了: {tool_name}")
-    return 0
+    # トピック選定
+    topic = select_article_topic(trends, ugc)
+    logger.info(f"選定トピック: {topic['tool']} (スコア: {topic['score']})")
+
+    # 記事生成（1日の上限まで）
+    articles_generated = 0
+    for i in range(min(MAX_ARTICLES_PER_DAY, 1)):  # 通常は1日1記事
+        logger.info(f"記事 {i+1} を生成中...")
+        content = generate_article_content(client, topic)
+
+        if content:
+            filepath = save_article(content)
+            if filepath:
+                articles_generated += 1
+                logger.info(f"記事 {i+1} 生成完了: {filepath}")
+
+    # ログ記録
+    log_json("generate.json", {
+        "phase": "B",
+        "action": "generate_article",
+        "status": "success" if articles_generated > 0 else "skipped",
+        "details": {
+            "articles_generated": articles_generated,
+            "topic_tool": topic["tool"],
+            "topic_score": topic["score"]
+        }
+    })
+
+    logger.info(f"記事生成完了: {articles_generated}本")
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

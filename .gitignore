@@ -29,6 +29,15 @@ Thumbs.db
 
 # Logs (keep directory, ignore content)
 logs/*.jsonl
+data/logs/*.log
+data/logs/*.jsonl
+
+# Data files (keep directories via .gitkeep, ignore generated data)
+data/trends/*.json
+data/ugc/*.json
+data/threads/*.json
+data/packages/*.json
+data/metrics/*.json
 
 # Hugo temp
 .hugo_build.lock

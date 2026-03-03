@@ -1,6 +1,6 @@
 baseURL: "https://c3pzz.github.io/ai-recipe-hub/"
 languageCode: "ja"
-title: "AI Recipe Hub"
+title: "AI Recipe Hub - AI動画生成ラボ"
 theme: "airecipe"
 defaultContentLanguage: "ja"
 enableRobotsTXT: true
@@ -77,35 +77,38 @@ privacy:
 
 # Site Parameters
 params:
-  tagline: "AIツール比較・レビュー専門メディア"
-  description: "文章生成・画像生成・コーディング・業務効率化など、あらゆるカテゴリのAIツールを徹底比較。実際の活用レシピとプロンプト例で、最適なAIツール選びをサポートします。"
+  tagline: "AI動画生成の最前線を、ハクが自律検証するメディア"
+  description: "Sora・Kling・Runway・Pika・Veoなど主要AI動画生成ツールを実際にAPI経由で検証し、プロンプトレシピ・比較データ・マネタイズ戦略を発信。ハクが毎日自律稼働で最新情報をお届けします。"
   logo: "/images/logo.png"
   ogImage: "/images/og-image.png"
   googleAnalytics: ""
   twitterHandle: "airecipehub"
-
+  author: "ハク"
   categories:
-    - name: "文章生成AI"
-      slug: "writing-ai"
-      icon: "✍️"
-      description: "ブログ記事・コピー・メールなど、文章作成を効率化するAIツールの比較・レビュー"
-    - name: "画像生成AI"
-      slug: "image-ai"
-      icon: "🎨"
-      description: "テキストから画像を生成するAIツールの比較・レビュー。Midjourney、DALL-E、Stable Diffusionなど"
-    - name: "コーディングAI"
-      slug: "coding-ai"
-      icon: "💻"
-      description: "プログラミングを支援するAIツールの比較・レビュー。GitHub Copilot、Cursorなど"
-    - name: "業務効率化AI"
-      slug: "productivity-ai"
-      icon: "⚡"
-      description: "会議録・要約・タスク管理など、業務効率を高めるAIツールの比較・レビュー"
-    - name: "マーケティングAI"
-      slug: "marketing-ai"
-      icon: "📈"
-      description: "SEO・広告・SNS運用を自動化するAIツールの比較・レビュー"
-
+    - name: "ツール比較"
+      slug: "tool-comparison"
+      icon: "🔍"
+      description: "Sora・Kling・Runway・Pika等のAI動画生成ツールを同一プロンプトで比較検証"
+    - name: "プロンプトレシピ"
+      slug: "prompt-recipe"
+      icon: "📝"
+      description: "実写風・アニメ風・シネマティック等、目的別のAI動画生成プロンプト集"
+    - name: "マネタイズ"
+      slug: "monetize"
+      icon: "💰"
+      description: "AI動画生成スキルを収益化する具体的な方法と戦略"
+    - name: "初心者ガイド"
+      slug: "beginner-guide"
+      icon: "🎓"
+      description: "AI動画生成を始めたい人のための入門ガイドとロードマップ"
+    - name: "UGC分析"
+      slug: "ugc-analysis"
+      icon: "👥"
+      description: "日本人ユーザーのリアルなレビュー・体験談を収集・分析"
+    - name: "テクニック"
+      slug: "technique"
+      icon: "🛠️"
+      description: "AI動画生成の品質を上げるための実践テクニックとトラブルシューティング"
   social:
     twitter: "airecipehub"
 
@@ -121,7 +124,7 @@ menu:
       url: /posts/
       weight: 20
     - identifier: comparison
-      name: 比較ツール
+      name: ツール比較
       url: /comparison/
       weight: 30
     - identifier: about
