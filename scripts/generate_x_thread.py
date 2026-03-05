@@ -22,7 +22,7 @@ from config import (
     OPENAI_TEMPERATURE_THREAD, THREAD_SYSTEM_PROMPT,
     TODAY, CONTENT_DIR, THREADS_DIR, SITE_BASE_URL,
     check_cost_limit, add_cost,
-    setup_logger, log_json
+    setup_logger, log_json, detect_forbidden_ip_terms
 )
 
 logger = setup_logger("generate_x_thread", "generate.log")
@@ -199,6 +199,26 @@ def save_thread(tweets: list, article: dict) -> str:
     return str(output_file)
 
 
+def fail_on_forbidden_terms(text: str, context: str):
+    """禁止IP参照を検出した場合、ログを残して停止する。"""
+    matches = detect_forbidden_ip_terms(text)
+    if not matches:
+        return
+
+    logger.error(f"禁止IP参照を検出: {matches}")
+    log_json("generate.json", {
+        "phase": "C",
+        "action": "generate_x_thread",
+        "status": "error",
+        "details": {
+            "error": "Forbidden IP terms detected",
+            "context": context,
+            "matched_patterns": matches,
+        }
+    })
+    sys.exit(1)
+
+
 def main():
     """メイン処理: 最新記事からXスレッドを生成する"""
     logger.info("=" * 60)
@@ -233,6 +253,8 @@ def main():
             "details": {"error": "Empty thread generated"}
         })
         sys.exit(1)
+
+    fail_on_forbidden_terms("\n".join(tweets), "thread_tweets")
 
     # 保存
     filepath = save_thread(tweets, article)

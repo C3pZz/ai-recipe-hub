@@ -3,7 +3,7 @@
 generate_article.py - Hugo用Markdown記事を自動生成するスクリプト
 
 収集したトレンド情報とUGCデータを元に、OpenAI API (gpt-4o-mini) を使って
-Hugo用のMarkdown記事を生成する。記事は「ハク」の口調（忍野忍風）で書かれる。
+Hugo用のMarkdown記事を生成する。記事は「ハク」の古風な口調で書かれる。
 
 実行タイミング: 毎日 AM7:00 JST（情報収集の後に実行）
 出力先: content/posts/YYYY-MM-DD-{slug}.md
@@ -22,7 +22,7 @@ from config import (
     OPENAI_TEMPERATURE_ARTICLE, ARTICLE_SYSTEM_PROMPT,
     TODAY, CONTENT_DIR, TRENDS_DIR, UGC_DIR, TOOL_NAMES,
     MAX_ARTICLES_PER_DAY, check_cost_limit, add_cost,
-    setup_logger, log_json, JST
+    setup_logger, log_json, JST, detect_forbidden_ip_terms
 )
 
 logger = setup_logger("generate_article", "generate.log")
@@ -209,6 +209,26 @@ def save_article(content: str) -> str:
     return str(filepath)
 
 
+def fail_on_forbidden_terms(text: str, context: str):
+    """禁止IP参照を検出した場合、ログを残して停止する。"""
+    matches = detect_forbidden_ip_terms(text)
+    if not matches:
+        return
+
+    logger.error(f"禁止IP参照を検出: {matches}")
+    log_json("generate.json", {
+        "phase": "B",
+        "action": "generate_article",
+        "status": "error",
+        "details": {
+            "error": "Forbidden IP terms detected",
+            "context": context,
+            "matched_patterns": matches,
+        }
+    })
+    sys.exit(1)
+
+
 def main():
     """メイン処理: トレンド・UGCデータを元に記事を生成する"""
     logger.info("=" * 60)
@@ -242,6 +262,7 @@ def main():
         content = generate_article_content(client, topic)
 
         if content:
+            fail_on_forbidden_terms(content, "article_markdown")
             filepath = save_article(content)
             if filepath:
                 articles_generated += 1

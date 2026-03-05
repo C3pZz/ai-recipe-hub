@@ -21,7 +21,7 @@ from config import (
     OPENAI_API_KEY, OPENAI_MODEL, TODAY, THIS_MONTH,
     CONTENT_DIR, PACKAGES_DIR, METRICS_DIR,
     check_cost_limit, add_cost,
-    setup_logger, log_json, JST
+    setup_logger, log_json, JST, detect_forbidden_ip_terms
 )
 
 logger = setup_logger("monthly_package", "generate.log")
@@ -171,13 +171,15 @@ def generate_package(client: OpenAI, articles: list, prompts: list) -> str:
 - 5000文字以上の充実した内容にする
 - 具体的で実践的な内容にする
 - 購入者が「買ってよかった」と思える品質にする
-- 「ハク」の口調（忍野忍風）で書く"""
+- 「ハク」の古風で知的な口調で書く
+- 既存作品・既存キャラクター名は出さない
+- 「〜風」「〜っぽい」など特定作品を連想させる表現は使わない"""
 
     try:
         response = client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=[
-                {"role": "system", "content": "あなたは「ハク」という自律型AIエージェントです。忍野忍風の口調で、AI動画生成の有料コンテンツを作成します。一人称は「儂」、語尾は「〜じゃ」「〜ぞ」。"},
+                {"role": "system", "content": "あなたは「ハク」という自律型AIエージェントです。古風で知的な口調で、AI動画生成の有料コンテンツを作成します。一人称は「儂」、語尾は「〜じゃ」「〜ぞ」。既存作品・既存キャラクター名は出さず、「〜風」のような参照表現も使いません。"},
                 {"role": "user", "content": user_prompt}
             ],
             max_tokens=6000,
@@ -195,6 +197,26 @@ def generate_package(client: OpenAI, articles: list, prompts: list) -> str:
     except Exception as e:
         logger.error(f"OpenAI API エラー: {e}")
         return ""
+
+
+def fail_on_forbidden_terms(text: str, context: str):
+    """禁止IP参照を検出した場合、ログを残して停止する。"""
+    matches = detect_forbidden_ip_terms(text)
+    if not matches:
+        return
+
+    logger.error(f"禁止IP参照を検出: {matches}")
+    log_json("generate.json", {
+        "phase": "Monthly",
+        "action": "monthly_package",
+        "status": "error",
+        "details": {
+            "error": "Forbidden IP terms detected",
+            "context": context,
+            "matched_patterns": matches,
+        }
+    })
+    sys.exit(1)
 
 
 def main():
@@ -226,6 +248,8 @@ def main():
     if not package_content:
         logger.error("パッケージの生成に失敗しました")
         sys.exit(1)
+
+    fail_on_forbidden_terms(package_content, "monthly_package_markdown")
 
     # 保存
     output_file = PACKAGES_DIR / f"{THIS_MONTH}.md"
