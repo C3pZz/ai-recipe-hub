@@ -18,8 +18,8 @@ AI Recipe Hub Ver2は、AI動画生成（Sora 2、Runway Gen-4.5、Kling 2.6、P
 | Python | 3.10+ | 自動化スクリプト |
 | Pagefind | v1.4.0 | 静的サイト内検索 |
 | GitHub Actions | - | CI/CD・自動運用 |
-| OpenAI API | GPT-4.1-mini | 記事生成・テキスト分析 |
-| Serper API | - | Google検索結果取得 |
+| Gemini API | Gemini 2.5 Flash | 記事生成・テキスト分析 |
+| Brave Search API | - | Web検索結果取得 |
 | X (Twitter) API | v2 | SNS自動投稿 |
 
 ## アーキテクチャ
@@ -120,11 +120,11 @@ pip install -r requirements.txt
 # .env ファイルの例
 # ===========================
 
-# Serper API（Google検索API）- トレンド収集・UGC収集に使用
-SERPER_API_KEY=your_serper_api_key_here
+# Brave Search API - トレンド収集・UGC収集に使用
+BRAVE_SEARCH_API_KEY=your_brave_search_api_key_here
 
-# OpenAI API（GPT-4.1系）- 記事生成・分析に使用
-OPENAI_API_KEY=your_openai_api_key_here
+# Gemini API - 記事生成・分析に使用
+GEMINI_API_KEY=your_gemini_api_key_here
 
 # X (Twitter) API - SNS自動投稿に使用
 X_API_KEY=your_x_api_key_here
@@ -138,16 +138,16 @@ X_BEARER_TOKEN=your_x_bearer_token_here
 
 | API | 取得先 | 用途 | 無料枠 |
 |-----|--------|------|--------|
-| Serper API | [serper.dev](https://serper.dev) | Google検索結果の取得 | 2,500回/月 |
-| OpenAI API | [platform.openai.com](https://platform.openai.com) | 記事生成・テキスト分析 | 従量課金 |
-| X API | [developer.x.com](https://developer.x.com) | SNS自動投稿 | Free tier: 投稿のみ |
+| Brave Search API | [api.search.brave.com](https://api.search.brave.com/) | Web検索結果の取得 | 2,000回/月 |
+| Gemini API | [aistudio.google.com](https://aistudio.google.com/) | 記事生成・テキスト分析 | 15 req/分, 1,500 req/日 |
+| X API | [developer.x.com](https://developer.x.com) | SNS自動投稿 | 従量課金 |
 
 ### 5. GitHub Secretsの設定（自動運用時）
 
 GitHub Actionsで自動運用する場合、リポジトリの Settings → Secrets and variables → Actions に以下を登録してください：
 
-- `SERPER_API_KEY`
-- `OPENAI_API_KEY`
+- `BRAVE_SEARCH_API_KEY`
+- `GEMINI_API_KEY`
 - `X_API_KEY`
 - `X_API_SECRET`
 - `X_ACCESS_TOKEN`
@@ -191,11 +191,11 @@ python scripts/collect_ugc.py
 
 | 項目 | 上限 | 推定月額コスト |
 |------|------|---------------|
-| Serper API | 100回/日 | 無料枠内 |
-| OpenAI API (GPT-4.1-mini) | 50回/日 | 約$5〜15/月 |
-| X API | 10投稿/日 | 無料 |
+| Brave Search API | 50回/日（かつ月2,000回ハード上限） | 無料枠内 |
+| Gemini API | 15リクエスト/分、1,500リクエスト/日 | 無料枠内 |
+| X API | コンテンツ作成10回/日、150回/月 | 約$0.40/月（週2回×5ポスト想定） |
 
-月間合計推定コスト: **$5〜15/月**
+月間合計推定コスト: **約$0.40〜$2.00/月**（X投稿回数に依存）
 
 ## 停止スイッチ
 

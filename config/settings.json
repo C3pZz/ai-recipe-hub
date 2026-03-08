@@ -1,19 +1,29 @@
 {
   "cost_limits": {
-    "monthly_total_usd": 100,
-    "daily_openai_usd": 5,
-    "daily_serper_queries": 50,
-    "monthly_x_posts": 150
+    "monthly_total_usd": 20,
+    "monthly_brave_queries": 2000,
+    "daily_brave_queries": 50,
+    "daily_gemini_requests": 1500,
+    "gemini_requests_per_minute": 15,
+    "monthly_x_budget_usd": 2.0,
+    "daily_x_content_create_limit": 10,
+    "monthly_x_content_create_limit": 150
   },
   "api": {
-    "openai_model": "gpt-4o-mini",
-    "openai_max_tokens_article": 4000,
-    "openai_max_tokens_thread": 1500,
-    "openai_temperature_article": 0.7,
-    "openai_temperature_thread": 0.9,
-    "serper_results_per_query": 5,
-    "serper_country": "jp",
-    "serper_language": "ja"
+    "gemini_model": "gemini-2.5-flash",
+    "gemini_max_output_tokens_article": 4000,
+    "gemini_max_output_tokens_thread": 1500,
+    "gemini_max_output_tokens_package": 6000,
+    "gemini_temperature_article": 0.7,
+    "gemini_temperature_thread": 0.9,
+    "gemini_temperature_package": 0.7,
+    "brave_results_per_query": 5,
+    "brave_country": "JP",
+    "brave_search_lang": "ja",
+    "brave_safesearch": "moderate"
+  },
+  "x_api_pricing": {
+    "content_create_usd": 0.01
   },
   "schedule": {
     "daily_collect_hour_jst": 6,

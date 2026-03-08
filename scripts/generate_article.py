@@ -2,7 +2,7 @@
 """
 generate_article.py - Hugo用Markdown記事を自動生成するスクリプト
 
-収集したトレンド情報とUGCデータを元に、OpenAI API (gpt-4o-mini) を使って
+収集したトレンド情報とUGCデータを元に、Gemini APIを使って
 Hugo用のMarkdown記事を生成する。記事は「ハク」の古風な口調で書かれる。
 
 実行タイミング: 毎日 AM7:00 JST（情報収集の後に実行）
@@ -14,26 +14,26 @@ import os
 import json
 import re
 import unicodedata
+import requests
 from datetime import datetime
-from openai import OpenAI
 
 from config import (
-    OPENAI_API_KEY, OPENAI_MODEL, OPENAI_MAX_TOKENS_ARTICLE,
-    OPENAI_TEMPERATURE_ARTICLE, ARTICLE_SYSTEM_PROMPT,
+    GEMINI_API_KEY, GEMINI_MODEL, GEMINI_MAX_OUTPUT_TOKENS_ARTICLE,
+    GEMINI_TEMPERATURE_ARTICLE, ARTICLE_SYSTEM_PROMPT,
     TODAY, CONTENT_DIR, TRENDS_DIR, UGC_DIR, TOOL_NAMES,
     MAX_ARTICLES_PER_DAY, check_cost_limit, add_cost,
-    setup_logger, log_json, JST, detect_forbidden_ip_terms
+    setup_logger, log_json, JST, detect_forbidden_ip_terms,
+    reserve_gemini_request
 )
 
 logger = setup_logger("generate_article", "generate.log")
 
 
-def get_openai_client() -> OpenAI:
-    """OpenAIクライアントを初期化して返す"""
-    if not OPENAI_API_KEY:
-        logger.error("OPENAI_API_KEY が設定されていません")
+def validate_gemini_key():
+    """Gemini APIキーが設定されているか確認する。"""
+    if not GEMINI_API_KEY:
+        logger.error("GEMINI_API_KEY が設定されていません")
         sys.exit(1)
-    return OpenAI(api_key=OPENAI_API_KEY)
 
 
 def load_today_trends() -> dict:
@@ -106,12 +106,22 @@ def slugify(text: str) -> str:
     return text or "article"
 
 
-def generate_article_content(client: OpenAI, topic: dict) -> str:
+def extract_gemini_text(response_json: dict) -> str:
+    """Geminiレスポンスからテキストを抽出する。"""
+    candidates = response_json.get("candidates", [])
+    if not candidates:
+        return ""
+
+    parts = candidates[0].get("content", {}).get("parts", [])
+    text_parts = [p.get("text", "") for p in parts if p.get("text")]
+    return "\n".join(text_parts).strip()
+
+
+def generate_article_content(topic: dict) -> str:
     """
-    OpenAI APIを使って記事を生成する。
+    Gemini APIを使って記事を生成する。
 
     Args:
-        client: OpenAIクライアント
         topic: トピック情報
 
     Returns:
@@ -153,27 +163,48 @@ def generate_article_content(client: OpenAI, topic: dict) -> str:
 
 記事全体を「ハク」の口調で書いてください。"""
 
+    if not reserve_gemini_request():
+        logger.error("Gemini APIの無料枠上限に到達しました（1分15回または1日1,500回）")
+        return ""
+
+    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+    payload = {
+        "systemInstruction": {
+            "parts": [{"text": ARTICLE_SYSTEM_PROMPT}]
+        },
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": user_prompt}]
+            }
+        ],
+        "generationConfig": {
+            "temperature": GEMINI_TEMPERATURE_ARTICLE,
+            "maxOutputTokens": GEMINI_MAX_OUTPUT_TOKENS_ARTICLE,
+        }
+    }
+    headers = {
+        "x-goog-api-key": GEMINI_API_KEY,
+        "Content-Type": "application/json",
+    }
+
     try:
-        response = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": ARTICLE_SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt}
-            ],
-            max_tokens=OPENAI_MAX_TOKENS_ARTICLE,
-            temperature=OPENAI_TEMPERATURE_ARTICLE,
+        response = requests.post(endpoint, headers=headers, json=payload, timeout=90)
+        response.raise_for_status()
+        response_json = response.json()
+
+        usage = response_json.get("usageMetadata", {})
+        prompt_tokens = usage.get("promptTokenCount", 0)
+        completion_tokens = usage.get("candidatesTokenCount", 0)
+        add_cost(0, "gemini_article")
+        logger.info(
+            f"記事生成完了: {prompt_tokens} input + {completion_tokens} output tokens (free tier)"
         )
 
-        # コスト計算（gpt-4o-mini: input $0.15/1M, output $0.60/1M）
-        usage = response.usage
-        cost = (usage.prompt_tokens * 0.15 + usage.completion_tokens * 0.60) / 1_000_000
-        add_cost(cost, "openai_article")
-        logger.info(f"記事生成完了: {usage.prompt_tokens} input + {usage.completion_tokens} output tokens (${cost:.4f})")
+        return extract_gemini_text(response_json)
 
-        return response.choices[0].message.content
-
-    except Exception as e:
-        logger.error(f"OpenAI API エラー: {e}")
+    except requests.RequestException as e:
+        logger.error(f"Gemini API エラー: {e}")
         return ""
 
 
@@ -248,8 +279,8 @@ def main():
         logger.warning("トレンド・UGCデータが空です。記事生成をスキップします。")
         sys.exit(0)
 
-    # OpenAIクライアント初期化
-    client = get_openai_client()
+    # Gemini APIキー確認
+    validate_gemini_key()
 
     # トピック選定
     topic = select_article_topic(trends, ugc)
@@ -259,7 +290,7 @@ def main():
     articles_generated = 0
     for i in range(min(MAX_ARTICLES_PER_DAY, 1)):  # 通常は1日1記事
         logger.info(f"記事 {i+1} を生成中...")
-        content = generate_article_content(client, topic)
+        content = generate_article_content(topic)
 
         if content:
             fail_on_forbidden_terms(content, "article_markdown")

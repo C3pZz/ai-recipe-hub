@@ -10,6 +10,8 @@ import os
 import json
 import logging
 import re
+import time
+import math
 from typing import List, Pattern
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
@@ -45,12 +47,16 @@ THIS_MONTH = datetime.now(JST).strftime("%Y-%m")
 # ============================================================
 # API キー（環境変数から読み込み）
 # ============================================================
-SERPER_API_KEY = os.environ.get("SERPER_API_KEY", "")
+BRAVE_SEARCH_API_KEY = os.environ.get("BRAVE_SEARCH_API_KEY", "") or os.environ.get("SERPER_API_KEY", "")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+# 互換性維持のため残す（新規利用は非推奨）
+SERPER_API_KEY = BRAVE_SEARCH_API_KEY
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 X_API_KEY = os.environ.get("X_API_KEY", "")
 X_API_SECRET = os.environ.get("X_API_SECRET", "")
 X_ACCESS_TOKEN = os.environ.get("X_ACCESS_TOKEN", "")
-X_ACCESS_SECRET = os.environ.get("X_ACCESS_SECRET", "")
+X_ACCESS_SECRET = os.environ.get("X_ACCESS_SECRET", "") or os.environ.get("X_ACCESS_TOKEN_SECRET", "")
+X_BEARER_TOKEN = os.environ.get("X_BEARER_TOKEN", "")
 KLING_API_KEY = os.environ.get("KLING_API_KEY", "")
 SLACK_WEBHOOK = os.environ.get("SLACK_WEBHOOK", "")
 
@@ -78,29 +84,60 @@ if not TOOL_NAMES:
     TOOL_NAMES = ["Kling", "Runway", "Sora", "Pika", "Veo"]
 
 # ============================================================
-# OpenAI API 設定
+# Gemini API 設定
 # ============================================================
-OPENAI_MODEL = SETTINGS.get("api", {}).get("openai_model", "gpt-4o-mini")
-OPENAI_MAX_TOKENS_ARTICLE = SETTINGS.get("api", {}).get("openai_max_tokens_article", 4000)
-OPENAI_MAX_TOKENS_THREAD = SETTINGS.get("api", {}).get("openai_max_tokens_thread", 1500)
-OPENAI_TEMPERATURE_ARTICLE = SETTINGS.get("api", {}).get("openai_temperature_article", 0.7)
-OPENAI_TEMPERATURE_THREAD = SETTINGS.get("api", {}).get("openai_temperature_thread", 0.9)
+GEMINI_MODEL = SETTINGS.get("api", {}).get("gemini_model", SETTINGS.get("api", {}).get("openai_model", "gemini-2.5-flash"))
+GEMINI_MAX_OUTPUT_TOKENS_ARTICLE = SETTINGS.get("api", {}).get("gemini_max_output_tokens_article", SETTINGS.get("api", {}).get("openai_max_tokens_article", 4000))
+GEMINI_MAX_OUTPUT_TOKENS_THREAD = SETTINGS.get("api", {}).get("gemini_max_output_tokens_thread", SETTINGS.get("api", {}).get("openai_max_tokens_thread", 1500))
+GEMINI_MAX_OUTPUT_TOKENS_PACKAGE = SETTINGS.get("api", {}).get("gemini_max_output_tokens_package", 6000)
+GEMINI_TEMPERATURE_ARTICLE = SETTINGS.get("api", {}).get("gemini_temperature_article", SETTINGS.get("api", {}).get("openai_temperature_article", 0.7))
+GEMINI_TEMPERATURE_THREAD = SETTINGS.get("api", {}).get("gemini_temperature_thread", SETTINGS.get("api", {}).get("openai_temperature_thread", 0.9))
+GEMINI_TEMPERATURE_PACKAGE = SETTINGS.get("api", {}).get("gemini_temperature_package", 0.7)
+
+# 互換性維持（既存スクリプト向け）
+OPENAI_MODEL = GEMINI_MODEL
+OPENAI_MAX_TOKENS_ARTICLE = GEMINI_MAX_OUTPUT_TOKENS_ARTICLE
+OPENAI_MAX_TOKENS_THREAD = GEMINI_MAX_OUTPUT_TOKENS_THREAD
+OPENAI_TEMPERATURE_ARTICLE = GEMINI_TEMPERATURE_ARTICLE
+OPENAI_TEMPERATURE_THREAD = GEMINI_TEMPERATURE_THREAD
 
 # ============================================================
-# Serper API 設定
+# Brave Search API 設定
 # ============================================================
-SERPER_RESULTS_PER_QUERY = SETTINGS.get("api", {}).get("serper_results_per_query", 5)
-SERPER_COUNTRY = SETTINGS.get("api", {}).get("serper_country", "jp")
-SERPER_LANGUAGE = SETTINGS.get("api", {}).get("serper_language", "ja")
+BRAVE_RESULTS_PER_QUERY = SETTINGS.get("api", {}).get("brave_results_per_query", SETTINGS.get("api", {}).get("serper_results_per_query", 5))
+BRAVE_COUNTRY = SETTINGS.get("api", {}).get("brave_country", SETTINGS.get("api", {}).get("serper_country", "JP")).upper()
+BRAVE_SEARCH_LANG = SETTINGS.get("api", {}).get("brave_search_lang", SETTINGS.get("api", {}).get("serper_language", "ja"))
+BRAVE_SAFESEARCH = SETTINGS.get("api", {}).get("brave_safesearch", "moderate")
+
+# 互換性維持（既存スクリプト向け）
+SERPER_RESULTS_PER_QUERY = BRAVE_RESULTS_PER_QUERY
+SERPER_COUNTRY = BRAVE_COUNTRY
+SERPER_LANGUAGE = BRAVE_SEARCH_LANG
 
 # ============================================================
 # コスト上限設定
 # ============================================================
 COST_LIMITS = SETTINGS.get("cost_limits", {})
 MONTHLY_COST_LIMIT_USD = COST_LIMITS.get("monthly_total_usd", 100)
+DAILY_GEMINI_REQUEST_LIMIT = min(int(COST_LIMITS.get("daily_gemini_requests", 1500)), 1500)
+GEMINI_REQUESTS_PER_MINUTE_LIMIT = min(int(COST_LIMITS.get("gemini_requests_per_minute", 15)), 15)
+MONTHLY_BRAVE_QUERY_LIMIT = min(int(COST_LIMITS.get("monthly_brave_queries", 2000)), 2000)
+DAILY_BRAVE_QUERY_LIMIT = min(int(COST_LIMITS.get("daily_brave_queries", COST_LIMITS.get("daily_serper_queries", 50))), MONTHLY_BRAVE_QUERY_LIMIT)
+MONTHLY_X_BUDGET_USD = float(COST_LIMITS.get("monthly_x_budget_usd", 2.0))
+X_API_PRICING = SETTINGS.get("x_api_pricing", {})
+X_CONTENT_CREATE_COST_USD = float(X_API_PRICING.get("content_create_usd", 0.01))
+DAILY_X_CONTENT_CREATE_LIMIT = int(COST_LIMITS.get("daily_x_content_create_limit", 10))
+default_monthly_x_create_limit = int(math.floor(MONTHLY_X_BUDGET_USD / X_CONTENT_CREATE_COST_USD)) if X_CONTENT_CREATE_COST_USD > 0 else 0
+configured_monthly_x_create_limit = int(COST_LIMITS.get("monthly_x_content_create_limit", default_monthly_x_create_limit))
+if default_monthly_x_create_limit > 0:
+    MONTHLY_X_CONTENT_CREATE_LIMIT = min(configured_monthly_x_create_limit, default_monthly_x_create_limit)
+else:
+    MONTHLY_X_CONTENT_CREATE_LIMIT = configured_monthly_x_create_limit
+
+# 互換性維持（既存スクリプト向け）
 DAILY_OPENAI_LIMIT_USD = COST_LIMITS.get("daily_openai_usd", 5)
-DAILY_SERPER_QUERY_LIMIT = COST_LIMITS.get("daily_serper_queries", 50)
-MONTHLY_X_POST_LIMIT = COST_LIMITS.get("monthly_x_posts", 150)
+DAILY_SERPER_QUERY_LIMIT = DAILY_BRAVE_QUERY_LIMIT
+MONTHLY_X_POST_LIMIT = COST_LIMITS.get("monthly_x_posts", MONTHLY_X_CONTENT_CREATE_LIMIT)
 
 # ============================================================
 # X投稿設定
@@ -210,12 +247,50 @@ def load_cost_tracker() -> dict:
     """コスト追跡データを読み込む"""
     if COST_TRACKER_FILE.exists():
         with open(COST_TRACKER_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+    else:
+        data = {
+            "monthly_total_usd": 0.0,
+            "daily_costs": {},
+            "daily_usage": {},
+            "monthly_usage": {},
+            "gemini_recent_requests_unix": [],
+            "last_updated": TODAY
+        }
+
+    # 後方互換: 古いフォーマットを補完
+    data.setdefault("monthly_total_usd", 0.0)
+    data.setdefault("daily_costs", {})
+    data.setdefault("daily_usage", {})
+    data.setdefault("monthly_usage", {})
+    data.setdefault("gemini_recent_requests_unix", [])
+    data.setdefault("last_updated", TODAY)
+    return data
+
+
+def new_tracker_data() -> dict:
+    """新しいトラッカーデータを返す。"""
     return {
         "monthly_total_usd": 0.0,
         "daily_costs": {},
+        "daily_usage": {},
+        "monthly_usage": {},
+        "gemini_recent_requests_unix": [],
         "last_updated": TODAY
     }
+
+
+def _prepare_tracker(tracker: dict):
+    """日付・月ごとの使用量集計領域を初期化する。"""
+    tracker.setdefault("daily_costs", {})
+    tracker.setdefault("daily_usage", {})
+    tracker.setdefault("monthly_usage", {})
+    tracker.setdefault("gemini_recent_requests_unix", [])
+
+    tracker["daily_costs"].setdefault(TODAY, {})
+    tracker["daily_usage"].setdefault(TODAY, {})
+    tracker["monthly_usage"].setdefault(THIS_MONTH, {})
+
 
 def save_cost_tracker(data: dict):
     """コスト追跡データを保存する"""
@@ -223,23 +298,100 @@ def save_cost_tracker(data: dict):
     with open(COST_TRACKER_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-def add_cost(amount_usd: float, category: str = "general"):
-    """APIコストを記録する"""
-    tracker = load_cost_tracker()
-    # 月が変わったらリセット
+
+def _reset_tracker_if_new_month(tracker: dict):
+    """月が変わったら月次コストだけリセットする。"""
     if not tracker.get("last_updated", "").startswith(THIS_MONTH):
         tracker["monthly_total_usd"] = 0.0
         tracker["daily_costs"] = {}
+        tracker["daily_usage"] = {}
+        tracker["gemini_recent_requests_unix"] = []
+
+
+def add_cost(amount_usd: float, category: str = "general"):
+    """APIコストを記録する"""
+    tracker = load_cost_tracker()
+    _reset_tracker_if_new_month(tracker)
+    _prepare_tracker(tracker)
     tracker["monthly_total_usd"] = tracker.get("monthly_total_usd", 0) + amount_usd
-    if TODAY not in tracker.get("daily_costs", {}):
-        tracker["daily_costs"][TODAY] = {}
     daily = tracker["daily_costs"][TODAY]
     daily[category] = daily.get(category, 0) + amount_usd
     save_cost_tracker(tracker)
 
+
+def reserve_usage(category: str, units: int = 1, daily_limit: int = None, monthly_limit: int = None) -> bool:
+    """
+    使用量を先に予約する（上限を超える場合はFalse）。
+    失敗時にAPIを呼ばないことで、従量課金の超過を防ぐ。
+    """
+    if units <= 0:
+        return True
+
+    tracker = load_cost_tracker()
+    _reset_tracker_if_new_month(tracker)
+    _prepare_tracker(tracker)
+
+    daily_usage = tracker["daily_usage"][TODAY].get(category, 0)
+    monthly_usage = tracker["monthly_usage"][THIS_MONTH].get(category, 0)
+
+    if daily_limit is not None and daily_usage + units > daily_limit:
+        return False
+    if monthly_limit is not None and monthly_usage + units > monthly_limit:
+        return False
+
+    tracker["daily_usage"][TODAY][category] = daily_usage + units
+    tracker["monthly_usage"][THIS_MONTH][category] = monthly_usage + units
+    save_cost_tracker(tracker)
+    return True
+
+
+def get_usage(category: str, scope: str = "daily") -> int:
+    """使用量を取得する。scopeはdailyまたはmonthly。"""
+    tracker = load_cost_tracker()
+    _reset_tracker_if_new_month(tracker)
+    _prepare_tracker(tracker)
+
+    if scope == "monthly":
+        return int(tracker["monthly_usage"][THIS_MONTH].get(category, 0))
+    return int(tracker["daily_usage"][TODAY].get(category, 0))
+
+
+def reserve_gemini_request() -> bool:
+    """
+    Gemini APIリクエストを予約する。
+    - 1日上限（無料枠: 1,500）
+    - 1分上限（無料枠: 15）
+    """
+    tracker = load_cost_tracker()
+    _reset_tracker_if_new_month(tracker)
+    _prepare_tracker(tracker)
+
+    daily = tracker["daily_usage"][TODAY].get("gemini_requests", 0)
+    if daily + 1 > DAILY_GEMINI_REQUEST_LIMIT:
+        return False
+
+    now_unix = time.time()
+    recent = tracker.get("gemini_recent_requests_unix", [])
+    recent = [ts for ts in recent if (now_unix - ts) < 60]
+    if len(recent) >= GEMINI_REQUESTS_PER_MINUTE_LIMIT:
+        tracker["gemini_recent_requests_unix"] = recent
+        save_cost_tracker(tracker)
+        return False
+
+    tracker["daily_usage"][TODAY]["gemini_requests"] = daily + 1
+    monthly = tracker["monthly_usage"][THIS_MONTH].get("gemini_requests", 0)
+    tracker["monthly_usage"][THIS_MONTH]["gemini_requests"] = monthly + 1
+    recent.append(now_unix)
+    tracker["gemini_recent_requests_unix"] = recent
+    save_cost_tracker(tracker)
+    return True
+
 def check_cost_limit() -> bool:
     """コスト上限をチェック。Trueなら停止すべき"""
     tracker = load_cost_tracker()
+    # 月初は前月コストを無視して新しい月として扱う
+    if not tracker.get("last_updated", "").startswith(THIS_MONTH):
+        return False
     if tracker.get("monthly_total_usd", 0) >= MONTHLY_COST_LIMIT_USD:
         return True
     return False

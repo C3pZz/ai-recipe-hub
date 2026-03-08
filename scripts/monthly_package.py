@@ -15,24 +15,25 @@ import json
 import re
 import glob
 from datetime import datetime
-from openai import OpenAI
+import requests
 
 from config import (
-    OPENAI_API_KEY, OPENAI_MODEL, TODAY, THIS_MONTH,
+    GEMINI_API_KEY, GEMINI_MODEL, TODAY, THIS_MONTH,
+    GEMINI_MAX_OUTPUT_TOKENS_PACKAGE, GEMINI_TEMPERATURE_PACKAGE,
     CONTENT_DIR, PACKAGES_DIR, METRICS_DIR,
     check_cost_limit, add_cost,
-    setup_logger, log_json, JST, detect_forbidden_ip_terms
+    setup_logger, log_json, JST, detect_forbidden_ip_terms,
+    reserve_gemini_request
 )
 
 logger = setup_logger("monthly_package", "generate.log")
 
 
-def get_openai_client() -> OpenAI:
-    """OpenAIクライアントを初期化して返す"""
-    if not OPENAI_API_KEY:
-        logger.error("OPENAI_API_KEY が設定されていません")
+def validate_gemini_key():
+    """Gemini APIキーが設定されているか確認する。"""
+    if not GEMINI_API_KEY:
+        logger.error("GEMINI_API_KEY が設定されていません")
         sys.exit(1)
-    return OpenAI(api_key=OPENAI_API_KEY)
 
 
 def load_monthly_articles() -> list:
@@ -118,12 +119,21 @@ def extract_prompts(articles: list) -> list:
     return prompts
 
 
-def generate_package(client: OpenAI, articles: list, prompts: list) -> str:
+def extract_gemini_text(response_json: dict) -> str:
+    """Geminiレスポンスからテキストを抽出する。"""
+    candidates = response_json.get("candidates", [])
+    if not candidates:
+        return ""
+    parts = candidates[0].get("content", {}).get("parts", [])
+    text_parts = [p.get("text", "") for p in parts if p.get("text")]
+    return "\n".join(text_parts).strip()
+
+
+def generate_package(articles: list, prompts: list) -> str:
     """
-    OpenAI APIを使って月次パッケージ原稿を生成する。
+    Gemini APIを使って月次パッケージ原稿を生成する。
 
     Args:
-        client: OpenAIクライアント
         articles: 記事データのリスト
         prompts: プロンプトのリスト
 
@@ -175,27 +185,52 @@ def generate_package(client: OpenAI, articles: list, prompts: list) -> str:
 - 既存作品・既存キャラクター名は出さない
 - 「〜風」「〜っぽい」など特定作品を連想させる表現は使わない"""
 
+    if not reserve_gemini_request():
+        logger.error("Gemini APIの無料枠上限に到達しました（1分15回または1日1,500回）")
+        return ""
+
+    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+    payload = {
+        "systemInstruction": {
+            "parts": [
+                {
+                    "text": "あなたは「ハク」という自律型AIエージェントです。古風で知的な口調で、AI動画生成の有料コンテンツを作成します。一人称は「儂」、語尾は「〜じゃ」「〜ぞ」。既存作品・既存キャラクター名は出さず、「〜風」のような参照表現も使いません。"
+                }
+            ]
+        },
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": user_prompt}]
+            }
+        ],
+        "generationConfig": {
+            "temperature": GEMINI_TEMPERATURE_PACKAGE,
+            "maxOutputTokens": GEMINI_MAX_OUTPUT_TOKENS_PACKAGE,
+        }
+    }
+    headers = {
+        "x-goog-api-key": GEMINI_API_KEY,
+        "Content-Type": "application/json",
+    }
+
     try:
-        response = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": "あなたは「ハク」という自律型AIエージェントです。古風で知的な口調で、AI動画生成の有料コンテンツを作成します。一人称は「儂」、語尾は「〜じゃ」「〜ぞ」。既存作品・既存キャラクター名は出さず、「〜風」のような参照表現も使いません。"},
-                {"role": "user", "content": user_prompt}
-            ],
-            max_tokens=6000,
-            temperature=0.7,
+        response = requests.post(endpoint, headers=headers, json=payload, timeout=120)
+        response.raise_for_status()
+        response_json = response.json()
+
+        usage = response_json.get("usageMetadata", {})
+        prompt_tokens = usage.get("promptTokenCount", 0)
+        completion_tokens = usage.get("candidatesTokenCount", 0)
+        add_cost(0, "gemini_package")
+        logger.info(
+            f"パッケージ生成完了: {prompt_tokens} input + {completion_tokens} output tokens (free tier)"
         )
 
-        # コスト計算
-        usage = response.usage
-        cost = (usage.prompt_tokens * 0.15 + usage.completion_tokens * 0.60) / 1_000_000
-        add_cost(cost, "openai_package")
-        logger.info(f"パッケージ生成完了: ${cost:.4f}")
+        return extract_gemini_text(response_json)
 
-        return response.choices[0].message.content
-
-    except Exception as e:
-        logger.error(f"OpenAI API エラー: {e}")
+    except requests.RequestException as e:
+        logger.error(f"Gemini API エラー: {e}")
         return ""
 
 
@@ -239,11 +274,11 @@ def main():
     # プロンプト抽出
     prompts = extract_prompts(articles)
 
-    # OpenAIクライアント初期化
-    client = get_openai_client()
+    # Gemini APIキー確認
+    validate_gemini_key()
 
     # パッケージ生成
-    package_content = generate_package(client, articles, prompts)
+    package_content = generate_package(articles, prompts)
 
     if not package_content:
         logger.error("パッケージの生成に失敗しました")

@@ -15,25 +15,25 @@ import os
 import json
 import re
 import glob
-from openai import OpenAI
+import requests
 
 from config import (
-    OPENAI_API_KEY, OPENAI_MODEL, OPENAI_MAX_TOKENS_THREAD,
-    OPENAI_TEMPERATURE_THREAD, THREAD_SYSTEM_PROMPT,
+    GEMINI_API_KEY, GEMINI_MODEL, GEMINI_MAX_OUTPUT_TOKENS_THREAD,
+    GEMINI_TEMPERATURE_THREAD, THREAD_SYSTEM_PROMPT,
     TODAY, CONTENT_DIR, THREADS_DIR, SITE_BASE_URL,
     check_cost_limit, add_cost,
-    setup_logger, log_json, detect_forbidden_ip_terms
+    setup_logger, log_json, detect_forbidden_ip_terms,
+    reserve_gemini_request
 )
 
 logger = setup_logger("generate_x_thread", "generate.log")
 
 
-def get_openai_client() -> OpenAI:
-    """OpenAIクライアントを初期化して返す"""
-    if not OPENAI_API_KEY:
-        logger.error("OPENAI_API_KEY が設定されていません")
+def validate_gemini_key():
+    """Gemini APIキーが設定されているか確認する。"""
+    if not GEMINI_API_KEY:
+        logger.error("GEMINI_API_KEY が設定されていません")
         sys.exit(1)
-    return OpenAI(api_key=OPENAI_API_KEY)
 
 
 def find_latest_article() -> dict:
@@ -120,12 +120,21 @@ def parse_thread(raw_text: str) -> list:
     return tweets
 
 
-def generate_thread(client: OpenAI, article: dict) -> list:
+def extract_gemini_text(response_json: dict) -> str:
+    """Geminiレスポンスからテキストを抽出する。"""
+    candidates = response_json.get("candidates", [])
+    if not candidates:
+        return ""
+    parts = candidates[0].get("content", {}).get("parts", [])
+    text_parts = [p.get("text", "") for p in parts if p.get("text")]
+    return "\n".join(text_parts).strip()
+
+
+def generate_thread(article: dict) -> list:
     """
-    OpenAI APIを使ってX用5連スレッドを生成する。
+    Gemini APIを使ってX用5連スレッドを生成する。
 
     Args:
-        client: OpenAIクライアント
         article: 記事情報
 
     Returns:
@@ -146,28 +155,49 @@ def generate_thread(client: OpenAI, article: dict) -> list:
 1〜4ツイート目にはリンクを入れないでください。
 5ツイート目にのみリンクとCTAを入れてください。"""
 
+    if not reserve_gemini_request():
+        logger.error("Gemini APIの無料枠上限に到達しました（1分15回または1日1,500回）")
+        return []
+
+    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+    payload = {
+        "systemInstruction": {
+            "parts": [{"text": THREAD_SYSTEM_PROMPT}]
+        },
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": user_prompt}]
+            }
+        ],
+        "generationConfig": {
+            "temperature": GEMINI_TEMPERATURE_THREAD,
+            "maxOutputTokens": GEMINI_MAX_OUTPUT_TOKENS_THREAD,
+        }
+    }
+    headers = {
+        "x-goog-api-key": GEMINI_API_KEY,
+        "Content-Type": "application/json",
+    }
+
     try:
-        response = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": THREAD_SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt}
-            ],
-            max_tokens=OPENAI_MAX_TOKENS_THREAD,
-            temperature=OPENAI_TEMPERATURE_THREAD,
+        response = requests.post(endpoint, headers=headers, json=payload, timeout=90)
+        response.raise_for_status()
+        response_json = response.json()
+
+        usage = response_json.get("usageMetadata", {})
+        prompt_tokens = usage.get("promptTokenCount", 0)
+        completion_tokens = usage.get("candidatesTokenCount", 0)
+        add_cost(0, "gemini_thread")
+        logger.info(
+            f"スレッド生成完了: {prompt_tokens} input + {completion_tokens} output tokens (free tier)"
         )
 
-        # コスト計算
-        usage = response.usage
-        cost = (usage.prompt_tokens * 0.15 + usage.completion_tokens * 0.60) / 1_000_000
-        add_cost(cost, "openai_thread")
-        logger.info(f"スレッド生成完了: {usage.prompt_tokens} input + {usage.completion_tokens} output tokens (${cost:.4f})")
-
-        raw_text = response.choices[0].message.content
+        raw_text = extract_gemini_text(response_json)
         return parse_thread(raw_text)
 
-    except Exception as e:
-        logger.error(f"OpenAI API エラー: {e}")
+    except requests.RequestException as e:
+        logger.error(f"Gemini API エラー: {e}")
         return []
 
 
@@ -238,11 +268,11 @@ def main():
 
     logger.info(f"対象記事: {article['title']}")
 
-    # OpenAIクライアント初期化
-    client = get_openai_client()
+    # Gemini APIキー確認
+    validate_gemini_key()
 
     # スレッド生成
-    tweets = generate_thread(client, article)
+    tweets = generate_thread(article)
 
     if not tweets or all(not t for t in tweets):
         logger.error("スレッドの生成に失敗しました")

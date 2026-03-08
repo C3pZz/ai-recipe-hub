@@ -2,7 +2,7 @@
 """
 collect_ugc.py - UGC（ユーザー生成コンテンツ）収集・分析スクリプト
 
-Serper APIで「ツール名 + デメリット/退会/使ってみた」等のクエリで検索し、
+Brave Search APIで「ツール名 + デメリット/退会/使ってみた」等のクエリで検索し、
 個人ブログ・note・Zenn・Qiitaの記事URLを取得。
 BeautifulSoupで本文テキストをスクレイピングして保存する。
 
@@ -19,9 +19,10 @@ from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 
 from config import (
-    SERPER_API_KEY, TOOL_NAMES, UGC_QUERY_PATTERNS, TODAY, UGC_DIR,
-    SERPER_RESULTS_PER_QUERY, SERPER_COUNTRY, SERPER_LANGUAGE,
-    DAILY_SERPER_QUERY_LIMIT, check_cost_limit, add_cost,
+    BRAVE_SEARCH_API_KEY, TOOL_NAMES, UGC_QUERY_PATTERNS, TODAY, UGC_DIR,
+    BRAVE_RESULTS_PER_QUERY, BRAVE_COUNTRY, BRAVE_SEARCH_LANG, BRAVE_SAFESEARCH,
+    DAILY_BRAVE_QUERY_LIMIT, MONTHLY_BRAVE_QUERY_LIMIT,
+    check_cost_limit, reserve_usage, get_usage,
     setup_logger, log_json
 )
 
@@ -62,7 +63,7 @@ SCRAPE_HEADERS = {
 
 def search_ugc(tool_name: str, query_pattern: str) -> list:
     """
-    Serper APIでUGC記事を検索する。
+    Brave Search APIでUGC記事を検索する。
 
     Args:
         tool_name: ツール名
@@ -71,30 +72,30 @@ def search_ugc(tool_name: str, query_pattern: str) -> list:
     Returns:
         検索結果のリスト
     """
-    if not SERPER_API_KEY:
-        logger.error("SERPER_API_KEY が設定されていません")
+    if not BRAVE_SEARCH_API_KEY:
+        logger.error("BRAVE_SEARCH_API_KEY が設定されていません")
         return []
 
     query = query_pattern.format(tool=tool_name)
-    url = "https://google.serper.dev/search"
+    url = "https://api.search.brave.com/res/v1/web/search"
     headers = {
-        "X-API-KEY": SERPER_API_KEY,
-        "Content-Type": "application/json"
+        "Accept": "application/json",
+        "X-Subscription-Token": BRAVE_SEARCH_API_KEY,
     }
-    payload = {
+    params = {
         "q": query,
-        "gl": SERPER_COUNTRY,
-        "hl": SERPER_LANGUAGE,
-        "num": SERPER_RESULTS_PER_QUERY
+        "country": BRAVE_COUNTRY,
+        "search_lang": BRAVE_SEARCH_LANG,
+        "safesearch": BRAVE_SAFESEARCH,
+        "count": BRAVE_RESULTS_PER_QUERY,
     }
 
     try:
-        response = requests.post(url, headers=headers, json=payload, timeout=15)
+        response = requests.get(url, headers=headers, params=params, timeout=20)
         response.raise_for_status()
-        add_cost(0.001, "serper")
-        return response.json().get("organic", [])
+        return response.json().get("web", {}).get("results", [])
     except requests.RequestException as e:
-        logger.error(f"Serper API検索エラー ({query}): {e}")
+        logger.error(f"Brave Search API検索エラー ({query}): {e}")
         return []
 
 
@@ -182,7 +183,7 @@ def scrape_article_text(url: str, max_length: int = 3000) -> str:
         return ""
 
 
-def collect_tool_ugc(tool_name: str) -> list:
+def collect_tool_ugc(tool_name: str) -> tuple:
     """
     特定のツールに関するUGC記事を収集する。
 
@@ -193,14 +194,27 @@ def collect_tool_ugc(tool_name: str) -> list:
         UGCデータのリスト
     """
     ugc_data = []
+    queries_executed = 0
+    limit_reached = False
 
     for pattern in UGC_QUERY_PATTERNS:
+        if not reserve_usage(
+            "brave_search_queries",
+            units=1,
+            daily_limit=DAILY_BRAVE_QUERY_LIMIT,
+            monthly_limit=MONTHLY_BRAVE_QUERY_LIMIT,
+        ):
+            logger.warning("Brave Searchクエリ上限に到達。UGC収集を停止します。")
+            limit_reached = True
+            break
+
         query = pattern.format(tool=tool_name)
         logger.info(f"UGC検索中: {query}")
         results = search_ugc(tool_name, pattern)
+        queries_executed += 1
 
         for item in results:
-            url = item.get("link", "")
+            url = item.get("url", "")
             if not is_ugc_url(url):
                 continue
 
@@ -214,7 +228,7 @@ def collect_tool_ugc(tool_name: str) -> list:
                     "query": query,
                     "title": item.get("title", ""),
                     "url": url,
-                    "snippet": item.get("snippet", ""),
+                    "snippet": item.get("description", ""),
                     "domain": urlparse(url).netloc,
                     "text_length": len(text),
                     "text_preview": text[:500],
@@ -226,7 +240,7 @@ def collect_tool_ugc(tool_name: str) -> list:
 
         time.sleep(1)
 
-    return ugc_data
+    return ugc_data, queries_executed, limit_reached
 
 
 def main():
@@ -240,18 +254,24 @@ def main():
         logger.warning("月間コスト上限に到達。UGC収集をスキップします。")
         sys.exit(0)
 
+    if not BRAVE_SEARCH_API_KEY:
+        logger.error("BRAVE_SEARCH_API_KEY が設定されていません。UGC収集を中止します。")
+        sys.exit(1)
+
     all_ugc = []
     query_count = 0
+    limit_reached = False
 
     for tool_name in TOOL_NAMES:
-        if query_count >= DAILY_SERPER_QUERY_LIMIT:
-            logger.warning(f"日次クエリ上限に到達。残りのツールをスキップします。")
+        if limit_reached:
+            logger.warning("Brave Searchクエリ上限のため残りのツールをスキップします。")
             break
 
         logger.info(f"--- {tool_name} のUGC収集 ---")
-        ugc_data = collect_tool_ugc(tool_name)
+        ugc_data, executed, hit_limit = collect_tool_ugc(tool_name)
         all_ugc.extend(ugc_data)
-        query_count += len(UGC_QUERY_PATTERNS)
+        query_count += executed
+        limit_reached = hit_limit
         logger.info(f"{tool_name}: {len(ugc_data)}件のUGC記事を取得")
 
     # 結果を保存
@@ -276,9 +296,12 @@ def main():
         "details": {
             "total_articles": len(all_ugc),
             "total_queries": query_count,
-            "domains": list(set(a["domain"] for a in all_ugc))
+            "domains": list(set(a["domain"] for a in all_ugc)),
+            "daily_query_limit": DAILY_BRAVE_QUERY_LIMIT,
+            "monthly_query_limit": MONTHLY_BRAVE_QUERY_LIMIT,
+            "monthly_queries_used": get_usage("brave_search_queries", "monthly"),
         },
-        "cost_usd": query_count * 0.001
+        "cost_usd": 0
     })
 
     return output_data

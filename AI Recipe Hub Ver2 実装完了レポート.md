@@ -46,19 +46,19 @@ AI Recipe Hub Ver2（AI動画生成特化型）の全コード実装が完了し
 | スクリプト | 機能 | 使用API |
 |-----------|------|---------|
 | `config.py` | 共通設定・ログ・ユーティリティ | - |
-| `collect_trends.py` | AI動画生成トレンド収集 | Serper API |
-| `collect_ugc.py` | UGC（ユーザーレビュー）収集・分析 | Serper API + OpenAI |
-| `generate_article.py` | 記事自動生成 | OpenAI (GPT-4.1-mini) |
-| `generate_x_thread.py` | Xスレッド生成 | OpenAI (GPT-4.1-mini) |
+| `collect_trends.py` | AI動画生成トレンド収集 | Brave Search API |
+| `collect_ugc.py` | UGC（ユーザーレビュー）収集・分析 | Brave Search API |
+| `generate_article.py` | 記事自動生成 | Gemini API |
+| `generate_x_thread.py` | Xスレッド生成 | Gemini API |
 | `post_to_x.py` | X自動投稿 | X API v2 (tweepy) |
-| `monthly_package.py` | 月次コンテンツパッケージ生成 | OpenAI (GPT-4.1-mini) |
+| `monthly_package.py` | 月次コンテンツパッケージ生成 | Gemini API |
 
 ## 5. 環境変数一覧（すべて未設定 → 後から差し込み）
 
 | 変数名 | 用途 | 取得先 |
 |--------|------|--------|
-| `SERPER_API_KEY` | Google検索結果取得 | serper.dev |
-| `OPENAI_API_KEY` | 記事生成・テキスト分析 | platform.openai.com |
+| `BRAVE_SEARCH_API_KEY` | Web検索結果取得 | api.search.brave.com |
+| `GEMINI_API_KEY` | 記事生成・テキスト分析 | aistudio.google.com |
 | `X_API_KEY` | X投稿 | developer.x.com |
 | `X_API_SECRET` | X投稿 | developer.x.com |
 | `X_ACCESS_TOKEN` | X投稿 | developer.x.com |
@@ -69,11 +69,11 @@ AI Recipe Hub Ver2（AI動画生成特化型）の全コード実装が完了し
 
 | 項目 | 月額推定 |
 |------|---------|
-| Serper API | 無料枠内（2,500回/月） |
-| OpenAI API (GPT-4.1-mini) | $5〜15/月 |
-| X API | 無料（Free tier） |
+| Brave Search API | 無料枠内（2,000回/月、ハード上限で超過防止） |
+| Gemini API | 無料枠内（15 req/分、1,500 req/日） |
+| X API | 約$0.40/月（週2回×5ポスト想定、$0.01/作成） |
 | Hugo/GitHub Pages | 無料 |
-| **合計** | **$5〜15/月（約750〜2,250円）** |
+| **合計** | **約$0.40〜$2.00/月（約60〜300円）** |
 
 ## 7. 収益仮説
 
@@ -91,7 +91,7 @@ AI Recipe Hub Ver2（AI動画生成特化型）の全コード実装が完了し
 | リスク | 対策 |
 |--------|------|
 | API規約違反 | 各APIの利用規約を遵守、レート制限設定済み |
-| コンテンツ品質低下 | GPT-4.1-miniの出力を人間がレビュー可能な設計 |
+| コンテンツ品質低下 | Gemini出力を人間がレビュー可能な設計 |
 | API費用超過 | config/settings.jsonで日次上限を設定 |
 | GitHub Actions障害 | 手動実行も可能な設計 |
 | X凍結リスク | 投稿頻度を週2回に制限、スパム判定回避 |

@@ -21,7 +21,8 @@ from config import (
     X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_SECRET,
     TODAY, THREADS_DIR,
     X_JITTER_MAX, X_TWEET_INTERVAL_MIN, X_TWEET_INTERVAL_MAX, X_MAX_RETRIES,
-    check_cost_limit,
+    X_CONTENT_CREATE_COST_USD, DAILY_X_CONTENT_CREATE_LIMIT, MONTHLY_X_CONTENT_CREATE_LIMIT,
+    check_cost_limit, reserve_usage, get_usage, add_cost,
     setup_logger, log_json
 )
 
@@ -90,6 +91,20 @@ def post_thread(client: tweepy.Client, tweets: list) -> list:
             logger.warning(f"ツイート{i+1}が空です。スキップします。")
             continue
 
+        # 都度課金制に対応: API呼び出し前に上限内であることを予約
+        reserved = reserve_usage(
+            "x_content_create",
+            units=1,
+            daily_limit=DAILY_X_CONTENT_CREATE_LIMIT,
+            monthly_limit=MONTHLY_X_CONTENT_CREATE_LIMIT,
+        )
+        if not reserved:
+            logger.error(
+                "X API作成上限に到達。これ以上投稿しません。"
+                f" (daily={DAILY_X_CONTENT_CREATE_LIMIT}, monthly={MONTHLY_X_CONTENT_CREATE_LIMIT})"
+            )
+            return posted_ids
+
         success = False
         for retry in range(X_MAX_RETRIES):
             try:
@@ -101,6 +116,7 @@ def post_thread(client: tweepy.Client, tweets: list) -> list:
                 previous_tweet_id = tweet_id
                 posted_ids.append(tweet_id)
                 logger.info(f"ツイート {i+1}/5 投稿成功: ID={tweet_id}")
+                add_cost(X_CONTENT_CREATE_COST_USD, "x_content_create")
                 success = True
                 break
 
@@ -148,7 +164,7 @@ def main():
     logger.info(f"X投稿処理開始: {TODAY}")
     logger.info("=" * 60)
 
-    # コスト上限チェック（X API Free Tierは無料だが、投稿数上限はチェック）
+    # コスト上限チェック（全体予算）
     if check_cost_limit():
         logger.warning("月間コスト上限に到達。X投稿をスキップします。")
         sys.exit(0)
@@ -193,9 +209,13 @@ def main():
             "tweets_attempted": len(tweets),
             "tweets_posted": len(posted_ids),
             "posted_ids": posted_ids,
-            "jitter_seconds": round(jitter)
+            "jitter_seconds": round(jitter),
+            "x_content_create_daily_used": get_usage("x_content_create", "daily"),
+            "x_content_create_monthly_used": get_usage("x_content_create", "monthly"),
+            "x_content_create_daily_limit": DAILY_X_CONTENT_CREATE_LIMIT,
+            "x_content_create_monthly_limit": MONTHLY_X_CONTENT_CREATE_LIMIT,
         },
-        "cost_usd": 0  # X API Free Tierは無料
+        "cost_usd": round(len(posted_ids) * X_CONTENT_CREATE_COST_USD, 6)
     })
 
     if posted_ids:

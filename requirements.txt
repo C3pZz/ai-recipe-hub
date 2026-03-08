@@ -4,8 +4,8 @@
 # HTTP / API通信
 requests>=2.31.0
 
-# OpenAI API (GPT-4.1系 記事生成・分析)
-openai>=1.12.0
+# HTMLパース（UGCスクレイピング）
+beautifulsoup4>=4.12.0
 
 # X (Twitter) API投稿
 tweepy>=4.14.0
